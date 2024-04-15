@@ -4,4 +4,9 @@ import org.jmolecules.architecture.hexagonal.PrimaryAdapter;
 
 @PrimaryAdapter
 public class PrimaryAdapterType {
+
+    public class InnerPrimaryAdapterType {
+
+    }
+
 }

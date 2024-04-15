@@ -4,4 +4,9 @@ import org.jmolecules.architecture.hexagonal.Port;
 
 @Port(name = "CustomNamedPort")
 public class NamedPort {
+
+    public class InnerNamedPort {
+
+    }
+
 }

@@ -39,6 +39,12 @@
               (type:Type)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(annotation:Type{fqn: "org.jmolecules.architecture.hexagonal.Application"})
             MERGE
               (core)-[:CONTAINS]->(type)
+            WITH
+              core, type, [(type)-[:DECLARES*]->(inner:Type:Java) | inner] AS inners
+            FOREACH (inner IN inners |
+              MERGE
+                (port)-[:CONTAINS]->(inner)
+            )
             RETURN
               type AS CoreType
         ]]></cypher>
@@ -113,6 +119,12 @@
               (a)-[:HAS]->(description:Value{name: "description"})
             SET
               port.description = coalesce(port.description, description.value)
+            WITH
+              port, type, [(type)-[:DECLARES*]->(inner:Type:Java) | inner] AS inners
+            FOREACH (inner IN inners |
+              MERGE
+                (port)-[:IMPLEMENTED_BY]->(inner)
+            )
             RETURN
               type AS Port
         ]]></cypher>
@@ -200,6 +212,12 @@
               (a)-[:HAS]->(description:Value{name: "description"})
             SET
               adapter.description = coalesce(adapter.description, description.value)
+            WITH
+              type, adapter, [(type)-[:DECLARES*]->(inner:Type:Java) | inner] AS inners
+            FOREACH (inner IN inners |
+              MERGE
+                (adapter)-[:IMPLEMENTED_BY]->(inner)
+            )
             RETURN
               type AS Adapter
         ]]></cypher>
