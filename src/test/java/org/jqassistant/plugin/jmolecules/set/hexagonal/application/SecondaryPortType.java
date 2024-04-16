@@ -4,4 +4,9 @@ import org.jmolecules.architecture.hexagonal.SecondaryPort;
 
 @SecondaryPort
 public class SecondaryPortType {
+
+    public class InnerSecondaryPortType {
+
+    }
+
 }

@@ -4,4 +4,9 @@ import org.jmolecules.architecture.hexagonal.Adapter;
 
 @Adapter
 public class AdapterType {
+
+    public class InnerAdapterType {
+
+    }
+
 }

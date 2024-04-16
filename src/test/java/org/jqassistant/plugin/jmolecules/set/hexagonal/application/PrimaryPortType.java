@@ -4,4 +4,9 @@ import org.jmolecules.architecture.hexagonal.PrimaryPort;
 
 @PrimaryPort
 public class PrimaryPortType {
+
+    public class InnerPrimaryPortType {
+
+    }
+
 }
