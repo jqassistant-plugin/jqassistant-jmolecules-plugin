@@ -1,0 +1,300 @@
+<jqassistant-rules xmlns="http://schema.jqassistant.org/rule/v1.10">
+
+    <group id="jmolecules-hexagonal:Default">
+        <includeConcept refId="jmolecules-hexagonal:ApplicationCoreType" severity="info"/>
+        <includeConcept refId="jmolecules-hexagonal:ApplicationCorePackage" severity="info"/>
+
+        <includeConcept refId="jmolecules-hexagonal:PortType" severity="info"/>
+        <includeConcept refId="jmolecules-hexagonal:PortPackage" severity="info"/>
+
+        <includeConcept refId="jmolecules-hexagonal:AdapterType" severity="info"/>
+        <includeConcept refId="jmolecules-hexagonal:AdapterPackage" severity="info"/>
+
+        <includeConcept refId="jmolecules-hexagonal:ApplicationCoreHasPort" severity="info"/>
+        <includeConcept refId="jmolecules-hexagonal:AggregateDependencies" severity="info"/>
+    </group>
+
+    <concept id="jmolecules-hexagonal:ApplicationCore">
+        <description>Identifies all types that are pat of the application core.</description>
+        <cypher><![CDATA[
+          MATCH
+            (a:JMolecules:Architecture:Hexagonal:ApplicationCore)-[:CONTAINS]->(t:Type)
+          RETURN
+            t AS ApplicationCore
+          ORDER BY
+            t.fqn
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-hexagonal:ApplicationCoreType">
+        <providesConcept refId="jmolecules-hexagonal:ApplicationCore"/>
+        <description>Associates all Java types which are annotated by org.jmolecules.architecture.hexagonal.Application
+            to the application core node.</description>
+        <cypher><![CDATA[
+            MERGE
+              (core:JMolecules:Architecture:Hexagonal:ApplicationCore)
+            WITH
+              core
+            MATCH
+              (type:Type)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(annotation:Type{fqn: "org.jmolecules.architecture.hexagonal.Application"})
+            MERGE
+              (core)-[:CONTAINS]->(type)
+            WITH
+              core, type, [(type)-[:DECLARES*]->(inner:Type:Java) | inner] AS inners
+            FOREACH (inner IN inners |
+              MERGE
+                (port)-[:CONTAINS]->(inner)
+            )
+            RETURN
+              type AS CoreType
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-hexagonal:ApplicationCorePackage">
+        <providesConcept refId="jmolecules-hexagonal:ApplicationCore"/>
+        <description>Associates all Java types in packages which are annotated by org.jmolecules.architecture.hexagonal.Application
+            to the :JMolecules:Architecture:Hexagonal:ApplicationCore-node.</description>
+        <cypher><![CDATA[
+            MERGE
+              (core:JMolecules:Architecture:Hexagonal:ApplicationCore)
+            WITH
+              core
+            MATCH
+              (package:Package)-[:CONTAINS]->(packageInfo:Type)-[:ANNOTATED_BY]->(a)-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn = "org.jmolecules.architecture.hexagonal.Application"
+              AND packageInfo.sourceFileName = "package-info.java"
+            WITH
+              core, package
+            MATCH
+              (package)-[:CONTAINS*]->(type:Type)
+            MERGE
+              (core)-[:CONTAINS]->(type)
+            RETURN
+              type AS CoreType
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-hexagonal:Port">
+        <description>Identifies all port types.</description>
+        <cypher><![CDATA[
+          MATCH
+            (p:JMolecules:Architecture:Hexagonal:Port)-[:IMPLEMENTED_BY]->(t:Type)
+          RETURN
+            p.type AS PortType, p.name AS PortName, t AS Port
+          ORDER BY
+            PortType, PortName, Port.fqn
+        ]]></cypher>
+        <report primaryColumn="Port"/>
+    </concept>
+
+    <concept id="jmolecules-hexagonal:PortType">
+        <providesConcept refId="jmolecules-hexagonal:Port"/>
+        <description>Associates all Java types which are annotated by org.jmolecules.architecture.hexagonal.-Type-Port
+            to the :JMolecules:Architecture:Hexagonal:Port{name, type}-node.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (type:Type)-[:ANNOTATED_BY]->(a)-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              NOT type.sourceFileName = "package-info.java" AND // Need to exclude package-info to avoid defaulting the port name to package-info. Annotated package-info will be evaluated in PortPackage concept.
+              annotation.fqn IN [
+                "org.jmolecules.architecture.hexagonal.Port",
+                "org.jmolecules.architecture.hexagonal.PrimaryPort",
+                "org.jmolecules.architecture.hexagonal.SecondaryPort"
+              ]
+            OPTIONAL MATCH
+              (a)-[:HAS]->(name:Value{name: "name"})
+            WITH
+              type, a, coalesce(name.value, type.name) AS name, replace(annotation.name, "Port", "") AS portType
+            WITH
+              type, a, name, CASE WHEN portType = "" THEN "Unqualified" ELSE portType END AS portType
+            MERGE
+              (port:JMolecules:Architecture:Hexagonal:Port{name: name, type: portType})
+            MERGE
+              (port)-[:IMPLEMENTED_BY]->(type)
+            WITH
+              a, port, type
+            OPTIONAL MATCH
+              (a)-[:HAS]->(description:Value{name: "description"})
+            SET
+              port.description = coalesce(port.description, description.value)
+            WITH
+              port, type, [(type)-[:DECLARES*]->(inner:Type:Java) | inner] AS inners
+            FOREACH (inner IN inners |
+              MERGE
+                (port)-[:IMPLEMENTED_BY]->(inner)
+            )
+            RETURN
+              type AS Port
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-hexagonal:PortPackage">
+        <providesConcept refId="jmolecules-hexagonal:Port"/>
+        <description>Associates all Java types which are in packages that are annotated by org.jmolecules.architecture.hexagonal.-Type-Port
+            to the :JMolecules:Architecture:Hexagonal:Port{name, type}-node.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (p:Package)-[:CONTAINS]->(packageInfo:Type)-[:ANNOTATED_BY]->(a)-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              packageInfo.sourceFileName = "package-info.java" AND
+              annotation.fqn IN [
+                "org.jmolecules.architecture.hexagonal.Port",
+                "org.jmolecules.architecture.hexagonal.PrimaryPort",
+                "org.jmolecules.architecture.hexagonal.SecondaryPort"
+              ]
+            MATCH
+              (p)-[:CONTAINS*]->(type:Type)
+            OPTIONAL MATCH
+              (a)-[:HAS]->(name:Value{name: "name"})
+            WITH
+              type, a, coalesce(name.value, p.name) AS name, replace(annotation.name, "Port", "") AS portType
+            WITH
+              type, a, name, CASE WHEN portType = "" THEN "Unqualified" ELSE portType END AS portType
+            MERGE
+              (port:JMolecules:Architecture:Hexagonal:Port{name: name, type: portType})
+            MERGE
+              (port)-[:IMPLEMENTED_BY]->(type)
+            WITH
+              a, port, type
+            OPTIONAL MATCH
+              (a)-[:HAS]->(description:Value{name: "description"})
+            SET
+              port.description = coalesce(port.description, description.value)
+            RETURN
+              type AS Port
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-hexagonal:Adapter">
+        <description>Identifies all adapter types.</description>
+        <cypher><![CDATA[
+          MATCH
+            (a:JMolecules:Architecture:Hexagonal:Adapter)-[:IMPLEMENTED_BY]->(t:Type)
+          RETURN
+            a.type AS AdapterType, a.name AS AdapterName, t AS Adapter
+          ORDER BY
+            AdapterType, AdapterName, Adapter.fqn
+        ]]></cypher>
+        <report primaryColumn="Adapter"/>
+    </concept>
+
+    <concept id="jmolecules-hexagonal:AdapterType">
+        <providesConcept refId="jmolecules-hexagonal:Adapter"/>
+        <description>Associates all Java types which are annotated by org.jmolecules.architecture.hexagonal.-Type-Adapter
+            to the :JMolecules:Architecture:Hexagonal:Adapter{name, type}-node.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (type:Type)-[:ANNOTATED_BY]->(a)-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              NOT type.sourceFileName = "package-info.java" AND // Need to exclude package-info to avoid defaulting the adapter name to package-info. Annotated package-info will be evaluated in AdapterPackage concept.
+              annotation.fqn IN [
+                "org.jmolecules.architecture.hexagonal.Adapter",
+                "org.jmolecules.architecture.hexagonal.PrimaryAdapter",
+                "org.jmolecules.architecture.hexagonal.SecondaryAdapter"
+              ]
+            OPTIONAL MATCH
+              (a)-[:HAS]->(name:Value{name: "name"})
+            WITH
+              type, a, coalesce(name.value, type.name) AS name, replace(annotation.name, "Adapter", "") AS adapterType
+            WITH
+              type, a, name, CASE WHEN adapterType = "" THEN "Unqualified" ELSE adapterType END AS adapterType
+            MERGE
+              (adapter:JMolecules:Architecture:Hexagonal:Adapter{name: name, type: adapterType})
+            MERGE
+              (adapter)-[:IMPLEMENTED_BY]->(type)
+            WITH
+              a, adapter, type
+            OPTIONAL MATCH
+              (a)-[:HAS]->(description:Value{name: "description"})
+            SET
+              adapter.description = coalesce(adapter.description, description.value)
+            WITH
+              type, adapter, [(type)-[:DECLARES*]->(inner:Type:Java) | inner] AS inners
+            FOREACH (inner IN inners |
+              MERGE
+                (adapter)-[:IMPLEMENTED_BY]->(inner)
+            )
+            RETURN
+              type AS Adapter
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-hexagonal:AdapterPackage">
+        <providesConcept refId="jmolecules-hexagonal:Adapter"/>
+        <description>Associates all Java types which are in packages that are annotated by org.jmolecules.architecture.hexagonal.-Type-Adapter
+            to the :JMolecules:Architecture:Hexagonal:Adapter{name, type}-node.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (p:Package)-[:CONTAINS]->(packageInfo:Type)-[:ANNOTATED_BY]->(a)-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              packageInfo.sourceFileName = "package-info.java" AND
+              annotation.fqn IN [
+                "org.jmolecules.architecture.hexagonal.Adapter",
+                "org.jmolecules.architecture.hexagonal.PrimaryAdapter",
+                "org.jmolecules.architecture.hexagonal.SecondaryAdapter"
+              ]
+            MATCH
+              (p)-[:CONTAINS*]->(type:Type)
+            OPTIONAL MATCH
+              (a)-[:HAS]->(name:Value{name: "name"})
+            WITH
+              type, a, coalesce(name.value, p.name) AS name, replace(annotation.name, "Adapter", "") AS adapterType
+            WITH
+              type, a, name, CASE WHEN adapterType = "" THEN "Unqualified" ELSE adapterType END AS adapterType
+            MERGE
+              (adapter:JMolecules:Architecture:Hexagonal:Adapter{name: name, type: adapterType})
+            MERGE
+              (adapter)-[:IMPLEMENTED_BY]->(type)
+            WITH
+              a, adapter, type
+            OPTIONAL MATCH
+              (a)-[:HAS]->(description:Value{name: "description"})
+            SET
+              adapter.description = coalesce(adapter.description, description.value)
+            RETURN
+              type AS Adapter
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-hexagonal:ApplicationCoreHasPort">
+        <requiresConcept refId="jmolecules-hexagonal:ApplicationCore"/>
+        <requiresConcept refId="jmolecules-hexagonal:Port"/>
+        <description>Maps ports to the application core via a :HAS_PORT relation.</description>
+        <cypher><![CDATA[
+          MATCH
+            (port:JMolecules:Architecture:Hexagonal:Port)-[:IMPLEMENTED_BY]->(type:Type),
+            (core:JMolecules:Architecture:Hexagonal:ApplicationCore)-[:CONTAINS]->(type)
+          MERGE
+            (core)-[:HAS_PORT]->(port)
+          RETURN
+            port AS Port
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-hexagonal:AggregateDependencies">
+        <requiresConcept refId="jmolecules-hexagonal:Adapter"/>
+        <requiresConcept refId="jmolecules-hexagonal:ApplicationCore"/>
+        <requiresConcept refId="jmolecules-hexagonal:Port"/>
+        <description>Aggregates dependencies between types to the level of Hexagonal components.</description>
+        <cypher><![CDATA[
+          MATCH
+            (c1:JMolecules:Architecture:Hexagonal)-[:CONTAINS|IMPLEMENTED_BY]->(t1:Type),
+            (c2:JMolecules:Architecture:Hexagonal)-[:CONTAINS|IMPLEMENTED_BY]->(t2:Type),
+            (t1)-[d:DEPENDS_ON]->(t2)
+          WHERE
+            c1 <> c2
+          WITH
+            c1, c2, sum(d.weight) AS weight
+          MERGE
+            (c1)-[:DEPENDS_ON{weight: weight}]->(c2)
+          RETURN
+            c1 AS Dependent, c2 AS Dependency
+        ]]></cypher>
+    </concept>
+
+</jqassistant-rules>

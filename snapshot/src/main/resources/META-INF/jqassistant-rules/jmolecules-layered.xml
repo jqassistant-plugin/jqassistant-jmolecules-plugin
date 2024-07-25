@@ -1,0 +1,112 @@
+<jqassistant-rules xmlns="http://schema.jqassistant.org/rule/v1.10">
+
+    <group id="jmolecules-layered:Default">
+        <includeConcept refId="jmolecules-layered:PrepareLayer" severity="info"/>
+        <includeConcept refId="jmolecules-layered:LayerPackage" severity="info"/>
+        <includeConcept refId="jmolecules-layered:LayerType" severity="info"/>
+        <includeConcept refId="jmolecules-layered:LayerDependency" severity="info"/>
+        <includeConstraint refId="jmolecules-layered:TypeInMultipleLayers"/>
+    </group>
+
+    <concept id="jmolecules-layered:PrepareLayer">
+        <description>Creates a node for each of the following layer: Interface, Application, Domain, Infrastructure.</description>
+        <cypher><![CDATA[
+            MERGE
+              (:JMolecules:Architecture:Layered:Layer{name: "Interface"})
+            MERGE
+              (:JMolecules:Architecture:Layered:Layer{name: "Application"})
+            MERGE
+              (:JMolecules:Architecture:Layered:Layer{name: "Domain"})
+            MERGE
+              (i:JMolecules:Architecture:Layered:Layer{name: "Infrastructure"})
+            WITH
+              i
+            MATCH
+              (layer:JMolecules:Architecture:Layered:Layer)
+            RETURN
+              layer.name AS Layer
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-layered:LayerPackage">
+        <requiresConcept refId="jmolecules-layered:PrepareLayer"/>
+        <description>Associates all Java types in packages which are annotated by org.jmolecules.architecture.layered.X
+            to the respective layer.</description>
+        <cypher><![CDATA[
+            MATCH
+              (layerPackage:Package)-[:CONTAINS]->(packageInfo:Type)-[:ANNOTATED_BY]->(a)-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn STARTS WITH "org.jmolecules.architecture.layered"
+              AND packageInfo.sourceFileName = "package-info.java"
+            WITH
+              layerPackage, annotation
+            MATCH
+              (layerPackage)-[:CONTAINS*]->(type:Type)
+            WITH
+              type, replace(annotation.name, "Layer", "") AS layerName
+            MATCH
+              (layer:JMolecules:Architecture:Layered:Layer{name: layerName})
+            MERGE
+              (layer)-[:CONTAINS]->(type)
+            RETURN
+              layer.name AS Layer, count(type) AS Types
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-layered:LayerType">
+        <requiresConcept refId="jmolecules-layered:PrepareLayer"/>
+        <description>Associates all Java types which are annotated by org.jmolecules.architecture.layered.X
+            to the respective layer.</description>
+        <cypher><![CDATA[
+            MATCH
+              (type:Type)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn STARTS WITH "org.jmolecules.architecture.layered"
+            WITH
+              type, replace(annotation.name, "Layer", "")  AS layerName
+            MATCH
+              (layer:JMolecules:Architecture:Layered:Layer{name: layerName})
+            MERGE
+              (layer)-[:CONTAINS]->(type)
+            RETURN
+              layer.name AS Layer, count(type) AS Types
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-layered:LayerDependency">
+        <requiresConcept refId="jmolecules-layered:LayerPackage"/>
+        <requiresConcept refId="jmolecules-layered:LayerType"/>
+        <description>Propagates the dependencies between Types of different Layers to the level of Layers including an aggregated weight.</description>
+        <cypher><![CDATA[
+            MATCH
+              (layer1:JMolecules:Architecture:Layered:Layer)-[:CONTAINS]->(layerType1:Type),
+              (layer2:JMolecules:Architecture:Layered:Layer)-[:CONTAINS]->(layerType2:Type),
+              (layerType1)-[d:DEPENDS_ON]->(layerType2)
+            WHERE
+              layer1 <> layer2
+            WITH
+              layer1, layer2, sum(d.weight) AS totalWeight
+            MERGE
+              (layer1)-[d:DEPENDS_ON{weight: totalWeight}]->(layer2)
+            RETURN
+              layer1.name AS Source, sum(d.weight) AS Weight, layer2.name AS Target
+        ]]></cypher>
+    </concept>
+
+    <constraint id="jmolecules-layered:TypeInMultipleLayers">
+        <requiresConcept refId="jmolecules-layered:LayerType"/>
+        <requiresConcept refId="jmolecules-layered:LayerPackage"/>
+        <description>Checks that a single DDD type is only part of one layer.</description>
+        <cypher><![CDATA[
+          MATCH
+            (layer:JMolecules:Architecture:Layered:Layer)-[:CONTAINS]->(type:Type)
+          WITH
+            type, collect(layer.name) AS layers
+          WHERE
+            size(layers) > 1
+          RETURN
+            type.fqn AS Type, layers AS AssignedLayers
+        ]]></cypher>
+    </constraint>
+
+</jqassistant-rules>

@@ -1,0 +1,28 @@
+<jqassistant-plugin xmlns="http://schema.jqassistant.org/plugin/v1.10" name="jQAssistant jMolecules Plug-In">
+    <description>Provides shared rules for jMolecules.</description>
+    <model>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.JMoleculesDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.architecture.ArchitectureDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.architecture.layered.LayeredDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.architecture.layered.LayerDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.architecture.onion.OnionDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.architecture.onion.RingDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.ddd.BoundedContextDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.ddd.DDDDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.ddd.ModuleDescriptor</class>
+    </model>
+    <rules>
+        <resource>jmolecules-cqrs.xml</resource>
+        <resource>jmolecules-ddd.xml</resource>
+        <resource>jmolecules-ddd-strict.xml</resource>
+        <resource>jmolecules-event.xml</resource>
+        <resource>jmolecules-hexagonal.xml</resource>
+        <resource>jmolecules-hexagonal-strict.xml</resource>
+        <resource>jmolecules-layered.xml</resource>
+        <resource>jmolecules-layered-strict.xml</resource>
+        <resource>jmolecules-onion-simplified.xml</resource>
+        <resource>jmolecules-onion-simplified-strict.xml</resource>
+        <resource>jmolecules-onion-classical.xml</resource>
+        <resource>jmolecules-onion-classical-strict.xml</resource>
+    </rules>
+</jqassistant-plugin>

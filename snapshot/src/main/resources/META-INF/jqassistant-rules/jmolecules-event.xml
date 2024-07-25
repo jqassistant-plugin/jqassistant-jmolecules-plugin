@@ -1,0 +1,204 @@
+<jqassistant-rules xmlns="http://schema.jqassistant.org/rule/v1.10">
+
+    <group id="jmolecules-event:Default">
+        <includeConcept refId="jmolecules-event:DomainEventType" severity="info"/>
+        <includeConcept refId="jmolecules-event:DomainEventExtend" severity="info"/>
+        <includeConcept refId="jmolecules-event:ExternalizedType" severity="info"/>
+        <includeConcept refId="jmolecules-event:ExternalizedExtend" severity="info"/>
+
+        <includeConcept refId="jmolecules-event:DomainEventHandler" severity="info"/>
+        <includeConcept refId="jmolecules-event:DomainEventHandlerHandlesByAnnotation" severity="info"/>
+        <includeConcept refId="jmolecules-event:DomainEventHandlerHandlesByParameter" severity="info"/>
+        <includeConcept refId="jmolecules-event:DomainEventPublisher" severity="info"/>
+        <includeConcept refId="jmolecules-event:DomainEventPublisherPublishes" severity="info"/>
+    </group>
+
+    <concept id="jmolecules-event:DomainEvent">
+        <description>Identifies all :JMolecules:Event:DomainEvent types.</description>
+        <cypher><![CDATA[
+            MATCH
+                (e:JMolecules:Event:DomainEvent)
+            RETURN
+                e AS DomainEvent
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-event:DomainEventType">
+        <providesConcept refId="jmolecules-event:DomainEvent"/>
+        <description>Labels all Java types which are annotated by
+            org.jmolecules.event.annotation.DomainEvent as :JMolecules:Event:DomainEvent.</description>
+        <cypher><![CDATA[
+            MATCH
+                (p:Package)-[:CONTAINS]->(e:Type)-[:ANNOTATED_BY]->(a)-[:OF_TYPE]->(annotation:Type)
+            WHERE
+                annotation.fqn = "org.jmolecules.event.annotation.DomainEvent"
+            SET
+                e:JMolecules:Event:DomainEvent
+            WITH
+                p, e, a
+            OPTIONAL MATCH
+                (a)-[:HAS]->(namespace:Value{name: "namespace"})
+            SET
+                e.eventNamespace = coalesce(namespace.value, p.fqn)
+            WITH
+                e, a
+            OPTIONAL MATCH
+                (a)-[:HAS]->(name:Value{name: "name"})
+            SET
+                e.eventName = coalesce(name.value, e.name)
+            RETURN
+                e AS DomainEvent
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-event:DomainEventExtend">
+        <providesConcept refId="jmolecules-event:DomainEvent"/>
+        <description>Labels all Java types which extend from
+            org.jmolecules.event.types.DomainEvent as :JMolecules:Event:DomainEvent.</description>
+        <cypher><![CDATA[
+            MATCH
+              (p:Package)-[:CONTAINS]->(domainEvent:Type)-[:EXTENDS|IMPLEMENTS*]->(event:Type)
+            WHERE
+              event.fqn = "org.jmolecules.event.types.DomainEvent"
+            SET
+              domainEvent:JMolecules:Event:DomainEvent,
+              domainEvent.eventNamespace = p.fqn,
+              domainEvent.eventName = domainEvent.name
+            RETURN
+              domainEvent AS DomainEvent
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-event:ExternalizedType">
+        <requiresConcept refId="jmolecules-event:DomainEvent"/>
+        <description>Labels all :JMolecules:Event:DomainEvent nodes annotated by
+            org.jmolecules.event.annotation.Externalized as :Externalized.</description>
+        <cypher><![CDATA[
+            MATCH
+                (e:JMolecules:Event:DomainEvent)-[:ANNOTATED_BY]->(a)-[:OF_TYPE]->(annotation:Type)
+            WHERE
+                annotation.fqn = "org.jmolecules.event.annotation.Externalized"
+            SET
+                e:Externalized
+            RETURN
+                e AS Externalized
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-event:ExternalizedExtend">
+        <requiresConcept refId="jmolecules-event:DomainEvent"/>
+        <description>Labels all :JMolecules:Event:DomainEvent nodes extending from
+            org.jmolecules.event.types.Externalized as :Externalized.</description>
+        <cypher><![CDATA[
+            MATCH
+              (e:JMolecules:Event:DomainEvent)-[:EXTENDS|IMPLEMENTS*]->(event:Type)
+            WHERE
+              event.fqn = "org.jmolecules.event.types.Externalized"
+            SET
+              e:Externalized
+            RETURN
+              e AS Externalized
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-event:DomainEventHandler">
+        <description>Labels all Java methods which are annotated by
+            org.jmolecules.event.annotation.DomainEventHandler as :JMolecules:Event:DomainEventHandler.</description>
+        <cypher><![CDATA[
+            MATCH
+              (handler:Method)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn = "org.jmolecules.event.annotation.DomainEventHandler"
+            SET
+              handler:JMolecules:Event:DomainEventHandler
+            RETURN
+              handler AS DomainEventHandler
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-event:DomainEventHandlerHandlesByAnnotation">
+        <requiresConcept refId="jmolecules-event:DomainEventHandler"/>
+        <requiresConcept refId="jmolecules-event:DomainEventType"/>
+        <requiresConcept refId="jmolecules-event:DomainEventExtend"/>
+        <description>Creates a relationship between :DomainEventHandler-nodes and :DomainEvent-nodes when the handler
+            handles the event based on information provided by the annotation.</description>
+        <cypher><![CDATA[
+            MATCH
+                (handler:JMolecules:Event:DomainEventHandler)-[:ANNOTATED_BY]->(a)-[:OF_TYPE]->(:Type{fqn: "org.jmolecules.event.annotation.DomainEventHandler"}),
+                (a)-[:HAS]->(namespace:Value{name: "namespace"}),
+                (a)-[:HAS]->(name:Value{name: "name"})
+            WITH
+                handler, namespace.value AS namespace, name.value AS name
+            MATCH
+                (event:JMolecules:Event:DomainEvent)
+            WHERE
+                (namespace = "*" OR namespace = event.eventNamespace) AND
+                (name = "*" OR name = event.eventName)
+            MERGE
+                (handler)-[:HANDLES]->(event)
+            RETURN
+                handler AS Handler, event AS Event
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-event:DomainEventHandlerHandlesByParameter">
+        <requiresConcept refId="jmolecules-event:DomainEventHandler"/>
+        <requiresConcept refId="jmolecules-event:DomainEventType"/>
+        <requiresConcept refId="jmolecules-event:DomainEventExtend"/>
+        <description>Creates a relationship between :DomainEventHandler-nodes and :DomainEvent-nodes when the handler
+            handles the event based on the method parameters.</description>
+        <cypher><![CDATA[
+            MATCH
+                (event:JMolecules:Event:DomainEvent),
+                (handler:JMolecules:Event:DomainEventHandler)-[:HAS]->(:Parameter)-[:OF_TYPE]->(event)
+            MERGE
+	            (handler)-[:HANDLES]->(event)
+            RETURN
+                handler AS Handler, event AS Event
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-event:DomainEventPublisher">
+        <description>Labels all Java methods which are annotated by
+            org.jmolecules.event.annotation.DomainEventPublisher as :JMolecules:Event:DomainEventPublisher.</description>
+        <cypher><![CDATA[
+            MATCH
+              (publisher:Method)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn = "org.jmolecules.event.annotation.DomainEventPublisher"
+            SET
+              publisher:JMolecules:Event:DomainEventPublisher
+            RETURN
+              publisher AS DomainEventPublisher
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-event:DomainEventPublisherPublishes">
+        <requiresConcept refId="jmolecules-event:DomainEventPublisher"/>
+        <requiresConcept refId="jmolecules-event:DomainEventType"/>
+        <requiresConcept refId="jmolecules-event:DomainEventExtend"/>
+        <description>Creates a relationship between :DomainEventPublisher-nodes and :DomainEvent-nodes when the publisher
+            publishes the event based on information provided by the annotation.</description>
+        <cypher><![CDATA[
+            MATCH
+                (publisher:JMolecules:Event:DomainEventPublisher)-[:ANNOTATED_BY]->(a),
+                (a)-[:OF_TYPE]->(:Type{fqn: "org.jmolecules.event.annotation.DomainEventPublisher"}),
+                (a)-[:HAS]->(publishes:Value{name: "publishes"})
+            WITH
+                publisher, publishes.value AS publishes, a
+            OPTIONAL MATCH
+                (a)-[:HAS]->(:Enum:Value{name: "type"})-[:IS]->(type:Field)
+            WITH
+                publisher, publishes, coalesce(split(type.signature, " ")[1], "UNKNOWN") AS type
+            MATCH
+                (event:JMolecules:Event:DomainEvent)
+            WHERE
+                publishes = event.eventNamespace + "." + event.eventName
+            MERGE
+                (publisher)-[:PUBLISHES{type: type}]->(event)
+            RETURN
+                publisher, event
+        ]]></cypher>
+    </concept>
+
+</jqassistant-rules>

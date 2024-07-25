@@ -1,0 +1,170 @@
+<jqassistant-rules xmlns="http://schema.jqassistant.org/rule/v1.10">
+
+    <group id="jmolecules-hexagonal:Strict">
+        <includeConstraint refId="jmolecules-hexagonal:TypeAssignedToMultipleHexagonalAspects"/>
+        <includeConstraint refId="jmolecules-hexagonal:PortMustBePartOfApplicationCore"/>
+        <includeConstraint refId="jmolecules-hexagonal:AdapterMustNotBePartOfApplicationCore"/>
+        <includeConstraint refId="jmolecules-hexagonal:IllegalAccessToPrimaryPort"/>
+        <includeConstraint refId="jmolecules-hexagonal:IllegalAccessToSecondaryPort"/>
+        <includeConstraint refId="jmolecules-hexagonal:AdapterMustOnlyBeAccessedBySameAdapterType"/>
+        <includeConstraint refId="jmolecules-hexagonal:AdapterMustOnlyBeAccessedBySameAdapter"/>
+        <includeConstraint refId="jmolecules-hexagonal:ApplicationCoreMustOnlyDependOnItself"/>
+        <includeConstraint refId="jmolecules-hexagonal:UseOfUnqualifiedAdapterOrPort"/>
+
+        <includeGroup refId="jmolecules-hexagonal:Default"/>
+    </group>
+
+    <constraint id="jmolecules-hexagonal:TypeAssignedToMultipleHexagonalAspects">
+        <requiresConcept refId="jmolecules-hexagonal:Adapter"/>
+        <requiresConcept refId="jmolecules-hexagonal:Port"/>        
+        <description>Ensures that each type is assigned to either port or an adapter.</description>
+        <cypher><![CDATA[
+          MATCH
+            (h:JMolecules:Architecture:Hexagonal)-[:IMPLEMENTED_BY]->(type:Type)
+          WHERE
+            h:Port OR h:Adapter
+          WITH
+            type, h, CASE WHEN h:Port Then "Port" ELSE "Adapter" END AS Aspect
+          WITH
+            type, {aspect: Aspect, type: h.type, name: h.name} AS Aspect
+          WITH
+            type, collect(Aspect) AS Aspects
+          WHERE
+            size(Aspects) > 1
+          RETURN
+            type AS Type, Aspects AS ImplementedAspects
+        ]]></cypher>
+    </constraint>
+
+    <constraint id="jmolecules-hexagonal:PortMustBePartOfApplicationCore">
+        <requiresConcept refId="jmolecules-hexagonal:ApplicationCoreHasPort"/>
+        <description>Ensures that ports are part of the application core.</description>
+        <cypher><![CDATA[
+          MATCH
+            (port:JMolecules:Architecture:Hexagonal:Port)-[:IMPLEMENTED_BY]->(type:Type)
+          WHERE
+            NOT (:JMolecules:Architecture:Hexagonal:ApplicationCore)-[:CONTAINS]->(type)
+          RETURN
+            type AS PortType, port AS PortOutsideApplicationCore
+        ]]></cypher>
+    </constraint>
+
+    <constraint id="jmolecules-hexagonal:AdapterMustNotBePartOfApplicationCore">
+        <requiresConcept refId="jmolecules-hexagonal:Adapter"/>
+        <requiresConcept refId="jmolecules-hexagonal:ApplicationCore"/>
+        <description>Ensures that ports are part of the application core.</description>
+        <cypher><![CDATA[
+          MATCH
+            (:JMolecules:Architecture:Hexagonal:ApplicationCore)-[:CONTAINS]->(type:Type),
+            (adapter:JMolecules:Architecture:Hexagonal:Adapter)-[:IMPLEMENTED_BY]->(type)
+          RETURN
+            type AS AdapterType, adapter AS AdapterInApplicationCore
+        ]]></cypher>
+    </constraint>
+
+    <constraint id="jmolecules-hexagonal:IllegalAccessToPrimaryPort">
+        <requiresConcept refId="jmolecules-hexagonal:Adapter"/>
+        <requiresConcept refId="jmolecules-hexagonal:ApplicationCore"/>
+        <requiresConcept refId="jmolecules-hexagonal:Port"/>
+        <description>Ensures dependencies to primary (and unqualified) ports are only introduced by primary/unqualified adapters.</description>
+        <cypher><![CDATA[
+          MATCH
+            (port:JMolecules:Architecture:Hexagonal:Port)-[:IMPLEMENTED_BY]->(portType:Type)<-[:DEPENDS_ON]-(dep:Type),
+            (a:Artifact)-[:CONTAINS]->(dep)
+          WHERE
+            port.type IN ["Primary", "Unqualified"] AND
+            NOT (:JMolecules:Architecture:Hexagonal:Adapter{type: "Unqualified"})-[:IMPLEMENTED_BY]->(dep) AND
+            NOT (:JMolecules:Architecture:Hexagonal:Adapter{type: "Primary"})-[:IMPLEMENTED_BY]->(dep) AND
+            NOT (:JMolecules:Architecture:Hexagonal:ApplicationCore)-[:CONTAINS]->(dep) AND
+            NOT (:JMolecules:Architecture:Hexagonal:Port{type: "Unqualified"})-[:IMPLEMENTED_BY]->(dep) AND
+            NOT (:JMolecules:Architecture:Hexagonal:Port{type: "Primary"})-[:IMPLEMENTED_BY]->(dep) AND
+            NOT a:Test
+          RETURN
+            dep AS IllegalDependent, portType AS Port
+        ]]></cypher>
+    </constraint>
+
+    <constraint id="jmolecules-hexagonal:IllegalAccessToSecondaryPort">
+        <requiresConcept refId="jmolecules-hexagonal:Adapter"/>
+        <requiresConcept refId="jmolecules-hexagonal:ApplicationCore"/>
+        <requiresConcept refId="jmolecules-hexagonal:Port"/>
+        <description>Ensures dependencies to secondary (and unqualified) ports are only introduced by the application core and secondary/unqualified adapters.</description>
+        <cypher><![CDATA[
+          MATCH
+            (port:JMolecules:Architecture:Hexagonal:Port)-[:IMPLEMENTED_BY]->(portType:Type)<-[:DEPENDS_ON]-(dep:Type),
+            (a:Artifact)-[:CONTAINS]->(dep)
+          WHERE
+            port.type IN ["Secondary", "Unqualified"] AND
+            NOT (:JMolecules:Architecture:Hexagonal:Adapter{type: "Unqualified"})-[:IMPLEMENTED_BY]->(dep) AND // explicit allowance for unqualified adapters
+            NOT (:JMolecules:Architecture:Hexagonal:Adapter{type: "Secondary"})-[:IMPLEMENTED_BY]->(dep) AND
+            NOT (:JMolecules:Architecture:Hexagonal:ApplicationCore)-[:CONTAINS]->(dep) AND
+            NOT (:JMolecules:Architecture:Hexagonal:Port{type: "Unqualified"})-[:IMPLEMENTED_BY]->(dep) AND
+            NOT (:JMolecules:Architecture:Hexagonal:Port{type: "Secondary"})-[:IMPLEMENTED_BY]->(dep) AND
+            NOT a:Test
+          RETURN
+            dep AS IllegalDependent, portType AS Port
+        ]]></cypher>
+    </constraint>
+
+    <constraint id="jmolecules-hexagonal:AdapterMustOnlyBeAccessedBySameAdapterType">
+        <requiresConcept refId="jmolecules-hexagonal:Adapter"/>
+        <description>Ensures that adapters are only accessed from itself and adapters of the same type. </description>
+        <cypher><![CDATA[
+          MATCH
+            (adapter:JMolecules:Architecture:Hexagonal:Adapter)-[:IMPLEMENTED_BY]->(adapterType:Type)<-[:DEPENDS_ON]-(dep:Type),
+            (a:Artifact)-[:CONTAINS]->(dep)
+          WHERE
+            NOT (:JMolecules:Architecture:Hexagonal:Adapter{type: adapter.type})-[:IMPLEMENTED_BY]->(dep) AND
+            NOT (:JMolecules:Architecture:Hexagonal:Adapter{type: "Unqualified"})-[:IMPLEMENTED_BY]->(dep) AND
+            NOT (adapter.type = "Unqualified" AND (:JMolecules:Architecture:Hexagonal:Adapter)-[:IMPLEMENTED_BY]->(dep)) AND
+            NOT a:Test
+          RETURN
+            dep AS IllegalDependent, adapterType AS Adapter
+        ]]></cypher>
+    </constraint>
+
+    <constraint id="jmolecules-hexagonal:AdapterMustOnlyBeAccessedBySameAdapter">
+        <requiresConcept refId="jmolecules-hexagonal:Adapter"/>
+        <description>Ensures that adapters are only accessed from itself. </description>
+        <cypher><![CDATA[
+          MATCH
+            (adapter:JMolecules:Architecture:Hexagonal:Adapter)-[:IMPLEMENTED_BY]->(adapterType:Type)<-[:DEPENDS_ON]-(dep:Type),
+            (a:Artifact)-[:CONTAINS]->(dep)
+          WHERE
+            NOT (adapter)-[:IMPLEMENTED_BY]->(dep) AND 
+            NOT a:Test 
+          RETURN
+            dep AS IllegalDependent, adapterType AS Adapter
+        ]]></cypher>
+    </constraint>
+
+    <constraint id="jmolecules-hexagonal:ApplicationCoreMustOnlyDependOnItself">
+        <requiresConcept refId="jmolecules-hexagonal:ApplicationCore"/>
+        <description>Ensures that the application core does not depend on external types (except libraries).</description>
+        <cypher><![CDATA[
+          MATCH
+            (core:JMolecules:Architecture:Hexagonal:ApplicationCore)-[:CONTAINS]->(type:Type)-[:DEPENDS_ON]->(dep:Type),
+            (:Artifact)-[:CONTAINS]->(dep)
+          WHERE
+            NOT (core)-[:CONTAINS]->(dep)
+          RETURN
+            type AS CoreType, dep AS Dependency
+        ]]></cypher>
+    </constraint>
+
+    <constraint id="jmolecules-hexagonal:UseOfUnqualifiedAdapterOrPort">
+        <requiresConcept refId="jmolecules-hexagonal:Adapter"/>
+        <requiresConcept refId="jmolecules-hexagonal:Port"/>
+        <description>Ensures ports and adapters are always qualified to primary or secondary.</description>
+        <cypher><![CDATA[
+          MATCH
+            (aspect:JMolecules:Architecture:Hexagonal)-[:IMPLEMENTED_BY]->(type:Type)
+          WHERE
+            (aspect:Port OR aspect:Adapter) AND aspect.type = "Unqualified"
+          RETURN
+            aspect AS UnqualifiedAspect, type AS ImplementingType
+        ]]></cypher>
+        <report primaryColumn="ImplementingType"/>
+    </constraint>
+
+</jqassistant-rules>

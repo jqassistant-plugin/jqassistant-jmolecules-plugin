@@ -1,0 +1,153 @@
+<jqassistant-rules xmlns="http://schema.jqassistant.org/rule/v1.10">
+
+    <group id="jmolecules-cqrs:Default">
+        <includeConcept refId="jmolecules-cqrs:QueryModel" severity="info"/>
+        <includeConcept refId="jmolecules-cqrs:Command" severity="info"/>
+
+        <includeConcept refId="jmolecules-cqrs:CommandHandler" severity="info"/>
+        <includeConcept refId="jmolecules-cqrs:CommandHandlerHandlesByAnnotation" severity="info"/>
+        <includeConcept refId="jmolecules-cqrs:CommandHandlerHandlesByParameter" severity="info"/>
+        <includeConcept refId="jmolecules-cqrs:CommandDispatcher" severity="info"/>
+        <includeConcept refId="jmolecules-cqrs:CommandDispatcherDispatches" severity="info"/>
+    </group>
+
+    <concept id="jmolecules-cqrs:QueryModel">
+        <description>Labels all Java types which are annotated by
+            org.jmolecules.architecture.cqrs.annotation.QueryModel or org.jmolecules.architecture.cqrs.QueryModel as :JMolecules:CQRS:QueryModel.</description>
+        <cypher><![CDATA[
+            MATCH
+                (t:Type)-[:ANNOTATED_BY]->(a)-[:OF_TYPE]->(annotation:Type)
+            WHERE
+                annotation.fqn = "org.jmolecules.architecture.cqrs.annotation.QueryModel" OR
+                annotation.fqn = "org.jmolecules.architecture.cqrs.QueryModel"
+            SET
+                t:JMolecules:CQRS:QueryModel
+            RETURN
+                t AS QueryModel
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-cqrs:Command">
+        <description>Labels all Java types which are annotated by
+            org.jmolecules.architecture.cqrs.annotation.Command OR org.jmolecules.architecture.cqrs.Command as :JMolecules:CQRS:Command.</description>
+        <cypher><![CDATA[
+            MATCH
+                (p:Package)-[:CONTAINS]->(c:Type)-[:ANNOTATED_BY]->(a)-[:OF_TYPE]->(annotation:Type)
+            WHERE
+                annotation.fqn = "org.jmolecules.architecture.cqrs.annotation.Command" OR
+                annotation.fqn = "org.jmolecules.architecture.cqrs.Command"
+            SET
+                c:JMolecules:CQRS:Command
+            WITH
+                p, c, a
+            OPTIONAL MATCH
+                (a)-[:HAS]->(namespace:Value{name: "namespace"})
+            SET
+                c.commandNamespace = coalesce(namespace.value, p.fqn)
+            WITH
+                c, a
+            OPTIONAL MATCH
+                (a)-[:HAS]->(name:Value{name: "name"})
+            SET
+                c.commandName = coalesce(name.value, c.name)
+            RETURN
+                c AS Command
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-cqrs:CommandHandler">
+        <description>Labels all Java methods which are annotated by
+            org.jmolecules.architecture.cqrs.annotation.CommandHandler or org.jmolecules.architecture.cqrs.annotation.CommandHandler as :JMolecules:CQRS:CommandHandler.</description>
+        <cypher><![CDATA[
+            MATCH
+              (handler:Method)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn = "org.jmolecules.architecture.cqrs.annotation.CommandHandler" OR
+              annotation.fqn = "org.jmolecules.architecture.cqrs.CommandHandler"
+            SET
+              handler:JMolecules:CQRS:CommandHandler
+            RETURN
+              handler AS CommandHandler
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-cqrs:CommandHandlerHandlesByAnnotation">
+        <requiresConcept refId="jmolecules-cqrs:CommandHandler"/>
+        <requiresConcept refId="jmolecules-cqrs:Command"/>
+        <description>Creates a relationship between :CommandHandler-nodes and :Command-nodes when the handler
+            handles the command based on information provided by the annotation.</description>
+        <cypher><![CDATA[
+            MATCH
+                (handler:JMolecules:CQRS:CommandHandler)-[:ANNOTATED_BY]->(a)-[:OF_TYPE]->(:Type{name: "CommandHandler"}),
+                (a)-[:HAS]->(namespace:Value{name: "namespace"}),
+                (a)-[:HAS]->(name:Value{name: "name"})
+            WITH
+                handler, namespace.value AS namespace, name.value AS name
+            MATCH
+                (command:JMolecules:CQRS:Command)
+            WHERE
+                (namespace = "*" OR namespace = command.commandNamespace) AND
+                (name = "*" OR name = command.commandName)
+            MERGE
+                (handler)-[:HANDLES]->(command)
+            RETURN
+                handler AS Handler, command AS Command
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-cqrs:CommandHandlerHandlesByParameter">
+        <requiresConcept refId="jmolecules-cqrs:CommandHandler"/>
+        <requiresConcept refId="jmolecules-cqrs:Command"/>
+        <description>Creates a relationship between :CommandHandler-nodes and :Command-nodes when the handler
+            handles the command based on the method parameters.</description>
+        <cypher><![CDATA[
+            MATCH
+                (command:JMolecules:CQRS:Command),
+                (handler:JMolecules:CQRS:CommandHandler)-[:HAS]->(:Parameter)-[:OF_TYPE]->(command)
+            MERGE
+	            (handler)-[:HANDLES]->(command)
+            RETURN
+                handler AS Handler, command AS Command
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-cqrs:CommandDispatcher">
+        <description>Labels all Java methods which are annotated by
+            org.jmolecules.architecture.cqrs.annotation.CommandDispatcher or org.jmolecules.architecture.cqrs.CommandDispatcher as :JMolecules:CQRS:CommandDispatcher.</description>
+        <cypher><![CDATA[
+            MATCH
+              (dispatcher:Method)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn = "org.jmolecules.architecture.cqrs.annotation.CommandDispatcher" OR
+              annotation.fqn = "org.jmolecules.architecture.cqrs.CommandDispatcher"
+            SET
+              dispatcher:JMolecules:CQRS:CommandDispatcher
+            RETURN
+              dispatcher AS CommandDispatcher
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-cqrs:CommandDispatcherDispatches">
+        <requiresConcept refId="jmolecules-cqrs:CommandDispatcher"/>
+        <requiresConcept refId="jmolecules-cqrs:Command"/>
+        <description>Creates a relationship between :CommandDispatcher-nodes and :Command-nodes when the dispatcher
+            dispatches the command based on information provided by the annotation.</description>
+        <cypher><![CDATA[
+            MATCH
+                (dispatcher:JMolecules:CQRS:CommandDispatcher)-[:ANNOTATED_BY]->(a),
+                (a)-[:OF_TYPE]->(:Type{name: "CommandDispatcher"}),
+                (a)-[:HAS]->(dispatches:Value{name: "dispatches"})
+            WITH
+                dispatcher, dispatches.value AS dispatches, a
+            MATCH
+                (command:JMolecules:CQRS:Command)
+            WHERE
+                dispatches = command.commandNamespace + "." + command.commandName
+            MERGE
+                (dispatcher)-[:DISPATCHES]->(command)
+            RETURN
+                dispatcher, command
+        ]]></cypher>
+    </concept>
+
+</jqassistant-rules>

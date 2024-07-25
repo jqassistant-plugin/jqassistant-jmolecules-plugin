@@ -1,0 +1,82 @@
+<jqassistant-rules xmlns="http://schema.jqassistant.org/rule/v1.10">
+
+    <group id="jmolecules-ddd:Strict">
+        <includeConcept refId="jmolecules-ddd:AllowedBoundedContextDependency"/>
+        <includeConstraint refId="jmolecules-ddd:NonFinalFieldInValueObject"/>
+        <includeConstraint refId="jmolecules-ddd:NonFinalEntityId"/>
+        <includeConstraint refId="jmolecules-ddd:IllegalDependenciesBetweenBoundedContexts"/>
+        <includeGroup refId="jmolecules-ddd:Default"/>
+    </group>
+
+    <concept id="jmolecules-ddd:AllowedBoundedContextDependency">
+        <requiresConcept refId="jmolecules-ddd:BoundedContextPackage"/>
+        <description>Reports :DEFINES_DEPENDENCY relations between :BoundedContext nodes. Adding relations is to be provided by project specific rules.
+        </description>
+        <cypher><![CDATA[
+          MATCH
+            (dependentBC:JMolecules:DDD:BoundedContext)-[:DEFINES_DEPENDENCY]->(dependencyBC:JMolecules:DDD:BoundedContext)
+          RETURN
+            dependentBC AS SourceBoundedContext, dependencyBC AS TargetBoundedContext
+          ORDER BY
+            SourceBoundedContext.name, TargetBoundedContext.name
+        ]]></cypher>
+    </concept>
+
+    <constraint id="jmolecules-ddd:NonFinalFieldInValueObject">
+        <requiresConcept refId="jmolecules-ddd:ValueObjectExtend"/>
+        <requiresConcept refId="jmolecules-ddd:ValueObjectType"/>
+        <description>Reports all fields of :ValueObject nodes that are not final, including those coming from parent classes.</description>
+        <cypher><![CDATA[
+          MATCH
+            (valueObject:JMolecules:DDD:ValueObject)-[:DECLARES]->(f:Field)
+          WHERE
+            f.final IS NULL OR f.final = false
+          RETURN
+            valueObject AS ValueObject, f AS MutableField
+          UNION
+          MATCH
+            (valueObject:JMolecules:DDD:ValueObject)-[:EXTENDS|IMPLEMENTS*]->(c)-[:DECLARES]->(f:Field)
+          WHERE
+            f.final IS NULL OR f.final = false
+          RETURN
+            valueObject AS ValueObject, f AS MutableField
+        ]]></cypher>
+        <report primaryColumn="f"/>
+    </constraint>
+
+    <constraint id="jmolecules-ddd:NonFinalEntityId">
+        <requiresConcept refId="jmolecules-ddd:IdentifiedBySuperClass"/>
+        <description>Checks that the id field of an entity (identifiable) is final.</description>
+        <cypher><![CDATA[
+          MATCH
+            (identifiable:JMolecules:DDD:Identifiable)-[:HAS_IDENTITY]->(f:Identity:Field)
+          WHERE
+            f.final IS NULL OR f.final = false
+          RETURN
+            identifiable AS Identifiable, f AS MutableIdentity
+        ]]></cypher>
+        <report primaryColumn="f"/>
+    </constraint>
+
+    <constraint id="jmolecules-ddd:IllegalDependenciesBetweenBoundedContexts">
+        <requiresConcept refId="jmolecules-ddd:AllowedBoundedContextDependency"/>
+        <requiresConcept refId="jmolecules-ddd:BoundedContextDependency"/>
+        <description>Checks that dependencies between :BoundedContext nodes exist only where allowed.</description>
+        <cypher><![CDATA[
+          MATCH
+            (dependentBC:JMolecules:DDD:BoundedContext)-[:DEPENDS_ON]->(dependencyBC:JMolecules:DDD:BoundedContext),
+            (dependentBC)-[:CONTAINS]->(t1:Type),
+            (dependencyBC)-[:CONTAINS]->(t2:Type),
+            (t1)-[:DEPENDS_ON]->(t2)
+          WHERE
+            dependentBC <> dependencyBC AND
+            NOT (:BoundedContext{name: dependentBC.name})-[:DEFINES_DEPENDENCY]->(:BoundedContext{name: dependencyBC.name})
+          RETURN
+            dependentBC AS SourceBoundedContext, dependencyBC AS TargetBoundedContext, t1 AS SourceType, t2 AS TargetType
+          ORDER BY
+            SourceBoundedContext.name, TargetBoundedContext.name
+        ]]></cypher>
+        <report primaryColumn="SourceType"/>
+    </constraint>
+
+</jqassistant-rules>

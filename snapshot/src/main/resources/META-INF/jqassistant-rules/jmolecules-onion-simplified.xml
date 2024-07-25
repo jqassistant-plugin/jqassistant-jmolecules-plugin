@@ -1,0 +1,110 @@
+<jqassistant-rules xmlns="http://schema.jqassistant.org/rule/v1.10">
+
+    <group id="jmolecules-onion-simplified:Default">
+        <includeConcept refId="jmolecules-onion-simplified:PrepareRing" severity="info"/>
+        <includeConcept refId="jmolecules-onion-simplified:RingPackage" severity="info"/>
+        <includeConcept refId="jmolecules-onion-simplified:RingType" severity="info"/>
+        <includeConcept refId="jmolecules-onion-simplified:RingDependency" severity="info"/>
+        <includeConstraint refId="jmolecules-onion-simplified:TypeInMultipleRings"/>
+    </group>
+
+    <concept id="jmolecules-onion-simplified:PrepareRing">
+        <description>Creates a node for each of the following layer: Application, Domain, Infrastructure.</description>
+        <cypher><![CDATA[
+            MERGE
+              (:JMolecules:Architecture:Onion:Ring{name: "Application"})
+            MERGE
+              (:JMolecules:Architecture:Onion:Ring{name: "Domain"})
+            MERGE
+              (i:JMolecules:Architecture:Onion:Ring{name: "Infrastructure"})
+            WITH
+              i
+            MATCH
+              (ring:JMolecules:Architecture:Onion:Ring)
+            RETURN
+              ring.name AS Ring
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-onion-simplified:RingPackage">
+        <requiresConcept refId="jmolecules-onion-simplified:PrepareRing"/>
+        <description>Associates all Java types in packages which are annotated by org.jmolecules.architecture.onion.simplified.X
+            to the respective ring.</description>
+        <cypher><![CDATA[
+            MATCH
+              (ringPackage:Package)-[:CONTAINS]->(packageInfo:Type)-[:ANNOTATED_BY]->(a)-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn STARTS WITH "org.jmolecules.architecture.onion.simplified"
+              AND packageInfo.sourceFileName = "package-info.java"
+            WITH
+              ringPackage, annotation
+            MATCH
+              (ringPackage)-[:CONTAINS*]->(type:Type)
+            WITH
+              type, replace(annotation.name, "Ring", "") AS ringName
+            MATCH
+              (ring:JMolecules:Architecture:Onion:Ring{name: ringName})
+            MERGE
+              (ring)-[:CONTAINS]->(type)
+            RETURN
+              ring.name AS Ring, count(type) AS Types
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-onion-simplified:RingType">
+        <requiresConcept refId="jmolecules-onion-simplified:PrepareRing"/>
+        <description>Associates all Java types which are annotated by org.jmolecules.architecture.onion.simplified.X
+            to the respective ring.</description>
+        <cypher><![CDATA[
+            MATCH
+              (type:Type)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn STARTS WITH "org.jmolecules.architecture.onion.simplified"
+            WITH
+              type, replace(annotation.name, "Ring", "")  AS ringName
+            MATCH
+              (ring:JMolecules:Architecture:Onion:Ring{name: ringName})
+            MERGE
+              (ring)-[:CONTAINS]->(type)
+            RETURN
+              ring.name AS Ring, count(type) AS Types
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-onion-simplified:RingDependency">
+        <requiresConcept refId="jmolecules-onion-simplified:RingPackage"/>
+        <requiresConcept refId="jmolecules-onion-simplified:RingType"/>
+        <description>Propagates the dependencies between Types of different Rings to the level of Rings including an aggregated weight.</description>
+        <cypher><![CDATA[
+            MATCH
+              (ring1:JMolecules:Architecture:Onion:Ring)-[:CONTAINS]->(ringType1:Type),
+              (ring2:JMolecules:Architecture:Onion:Ring)-[:CONTAINS]->(ringType2:Type),
+              (ringType1)-[d:DEPENDS_ON]->(ringType2)
+            WHERE
+              ring1 <> ring2
+            WITH
+              ring1, ring2, sum(d.weight) AS totalWeight
+            MERGE
+              (ring1)-[d:DEPENDS_ON{weight: totalWeight}]->(ring2)
+            RETURN
+              ring1.name AS Source, sum(d.weight) AS Weight, ring2.name AS Target
+        ]]></cypher>
+    </concept>
+
+    <constraint id="jmolecules-onion-simplified:TypeInMultipleRings">
+        <requiresConcept refId="jmolecules-onion-simplified:RingType"/>
+        <requiresConcept refId="jmolecules-onion-simplified:RingPackage"/>
+        <description>Checks that a single DDD type is only part of one ring.</description>
+        <cypher><![CDATA[
+          MATCH
+            (ring:JMolecules:Architecture:Onion:Ring)-[:CONTAINS]->(type:Type)
+          WITH
+            type, collect(ring.name) AS rings
+          WHERE
+            size(rings) > 1
+          RETURN
+            type.fqn AS Type, rings AS AssignedRings
+        ]]></cypher>
+    </constraint>
+
+</jqassistant-rules>

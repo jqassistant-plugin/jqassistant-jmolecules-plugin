@@ -1,0 +1,52 @@
+<jqassistant-rules xmlns="http://schema.jqassistant.org/rule/v1.10">
+
+    <group id="jmolecules-onion-simplified:Strict">
+        <includeConcept refId="jmolecules-onion-simplified:AllowedRingDependency"/>
+        <includeConstraint refId="jmolecules-onion-simplified:IllegalRingDependency"/>
+        <includeGroup refId="jmolecules-onion-simplified:Default"/>
+    </group>
+
+
+    <concept id="jmolecules-onion-simplified:AllowedRingDependency">
+        <requiresConcept refId="jmolecules-onion-simplified:PrepareRing"/>
+        <description>Creates a :DEFINES_DEPENDENCY relation between :Ring nodes for each allowed dependency.</description>
+        <cypher><![CDATA[
+            WITH
+              [
+                ["Infrastructure", "Application"], ["Infrastructure", "Domain"],
+                ["Application", "Domain"]
+            ] AS allowedDependencies
+          UNWIND
+            allowedDependencies AS allowedDependency
+          MATCH
+            (dependentRing:JMolecules:Architecture:Onion:Ring{name: allowedDependency[0]}),
+            (dependencyRing:JMolecules:Architecture:Onion:Ring{name: allowedDependency[1]})
+          MERGE
+            (dependentRing)-[:DEFINES_DEPENDENCY]->(dependencyRing)
+          RETURN
+            dependentRing AS Source, dependencyRing AS Target
+        ]]></cypher>
+    </concept>
+
+    <constraint id="jmolecules-onion-simplified:IllegalRingDependency">
+        <requiresConcept refId="jmolecules-onion-simplified:AllowedRingDependency"/>
+        <requiresConcept refId="jmolecules-onion-simplified:RingDependency"/>
+        <description>Checks that only allowed dependencies between rings are implemented.</description>
+        <cypher><![CDATA[
+          MATCH
+            (dependentRing:JMolecules:Architecture:Onion:Ring)-[:DEPENDS_ON]->(dependencyRing:JMolecules:Architecture:Onion:Ring),
+            (dependentRing)-[:CONTAINS]->(t1:Type),
+            (dependencyRing)-[:CONTAINS]->(t2:Type),
+            (t1)-[:DEPENDS_ON]->(t2)
+          WHERE
+            dependentRing <> dependencyRing AND
+            NOT EXISTS((dependentRing)-[:DEFINES_DEPENDENCY]->(dependencyRing))
+          RETURN
+            dependentRing AS SourceRing, dependencyRing AS TargetRing, t1 AS SourceType, t2 AS TargetType
+          ORDER BY
+            SourceRing.name, TargetRing.name
+        ]]></cypher>
+        <report primaryColumn="SourceType"/>
+    </constraint>
+
+</jqassistant-rules>

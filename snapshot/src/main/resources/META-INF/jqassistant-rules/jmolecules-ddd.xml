@@ -1,0 +1,485 @@
+<jqassistant-rules xmlns="http://schema.jqassistant.org/rule/v1.10">
+
+    <group id="jmolecules-ddd:Default">
+        <includeConcept refId="jmolecules-ddd:AggregateRootType"/>
+        <includeConcept refId="jmolecules-ddd:AggregateRootExtend"/>
+        <includeConcept refId="jmolecules-ddd:EntityType"/>
+        <includeConcept refId="jmolecules-ddd:EntityExtend"/>
+        <includeConcept refId="jmolecules-ddd:FactoryType"/>
+        <includeConcept refId="jmolecules-ddd:IdentifierExtend"/>
+        <includeConcept refId="jmolecules-ddd:IdentifiedByAnnotation"/>
+        <includeConcept refId="jmolecules-ddd:IdentifiedByMethod"/>
+        <includeConcept refId="jmolecules-ddd:RepositoryType"/>
+        <includeConcept refId="jmolecules-ddd:RepositoryExtend"/>
+        <includeConcept refId="jmolecules-ddd:ServiceType"/>
+        <includeConcept refId="jmolecules-ddd:ValueObjectType"/>
+        <includeConcept refId="jmolecules-ddd:ValueObjectExtend"/>
+        <includeConcept refId="jmolecules-ddd:BoundedContextPackage"/>
+        <includeConcept refId="jmolecules-ddd:BoundedContextDependency"/>
+        <includeConcept refId="jmolecules-ddd:ModulePackage"/>
+        <includeConcept refId="jmolecules-ddd:ModuleDependency"/>
+        <includeConstraint refId="jmolecules-ddd:TypeInMultipleBoundedContexts"/>
+        <includeConstraint refId="jmolecules-ddd:TypeInMultipleModules"/>
+        <includeConstraint refId="jmolecules-ddd:MutableValueObject"/>
+        <includeConstraint refId="jmolecules-ddd:MutableEntityId"/>
+        <includeConstraint refId="jmolecules-ddd:ValueObjectReferencingEntityOrAggregateRoot"/>
+    </group>
+
+    <concept id="jmolecules-ddd:AggregateRootType">
+        <description>Labels all Java types which are annotated by
+            org.jmolecules.ddd.annotation.AggregateRoot as :JMolecules:DDD:AggregateRoot:Entity:Identifiable.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (aggregate:Type)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn = "org.jmolecules.ddd.annotation.AggregateRoot"
+            SET
+              aggregate:JMolecules:DDD:AggregateRoot:Entity:Identifiable
+            RETURN
+              aggregate AS AggregateRoot
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:AggregateRootExtend">
+        <description>Labels all Java types which extend from
+            org.jmolecules.ddd.types.AggregateRoot as :JMolecules:DDD:AggregateRoot:Entity:Identifiable.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (aggregate:Type)-[:IMPLEMENTS|EXTENDS*]->(t:Type)
+            WHERE
+              t.fqn = "org.jmolecules.ddd.types.AggregateRoot"
+            SET
+              aggregate:JMolecules:DDD:AggregateRoot:Entity:Identifiable
+            RETURN
+              aggregate AS AggregateRoot
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:EntityType">
+        <description>Labels all Java types which are annotated by org.jmolecules.ddd.annotation.Entity as
+            :JMolecules:DDD:Entity:Identifiable.
+        </description>
+        <cypher><![CDATA[
+	        MATCH
+              (entity:Type)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn = "org.jmolecules.ddd.annotation.Entity"
+	        SET
+  	          entity:JMolecules:DDD:Entity:Identifiable
+            RETURN
+              entity AS Entity
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:EntityExtend">
+        <description>Labels all Java types which extend from org.jmolecules.ddd.annotation.Entity as
+            :JMolecules:DDD:Entity:Identifiable.
+        </description>
+        <cypher><![CDATA[
+	        MATCH
+              (entity:Type)-[:IMPLEMENTS|EXTENDS*]->(t:Type)
+            WHERE
+              t.fqn = "org.jmolecules.ddd.types.Entity"
+	        SET
+  	          entity:JMolecules:DDD:Entity:Identifiable
+            RETURN
+              entity AS Entity
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:FactoryType">
+        <description>Labels all Java types which are annotated by
+            org.jmolecules.ddd.annotation.Factory as :JMolecules:DDD:Factory.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (factory:Type)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn = "org.jmolecules.ddd.annotation.Factory"
+            SET
+              factory:JMolecules:DDD:Factory
+            RETURN
+              factory AS Factory
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:IdentifierExtend">
+        <description>Labels all Java types which extend from org.jmolecules.ddd.types.Identifier as
+            :JMolecules:DDD:Identifier.
+        </description>
+        <cypher><![CDATA[
+	        MATCH
+              (identifier:Type)-[:IMPLEMENTS|EXTENDS*]->(t:Type)
+            WHERE
+              t.fqn = "org.jmolecules.ddd.types.Identifier"
+	        SET
+  	          identifier:JMolecules:DDD:Identifier
+            RETURN
+              identifier AS Identifier
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:IdentifiedByAnnotation">
+        <description>Merges a :HAS_IDENTITY relation for each member that is annotated by
+            org.jmolecules.ddd.annotation.Identity between the defining type and the member and marks the member as
+            :JMolecules:DDD:Identity.
+        </description>
+        <cypher><![CDATA[
+	        MATCH
+              (t:Type)-[:DECLARES]->(m:Member),
+              (m)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(:Type{fqn: "org.jmolecules.ddd.annotation.Identity"})
+            WHERE
+              m.synthetic IS NULL OR m.synthetic = false
+            MERGE
+              (t)-[:HAS_IDENTITY]->(m)
+            SET
+              m:JMolecules:DDD:Identity
+            RETURN
+              t AS Type, m AS Identity
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:IdentifiedByMethod">
+        <description>Merges a :HAS_IDENTITY relation between the defining type and the 'getId' method when the type
+            extends from either 'AggregateRoot' or 'Entity' and marks the method as :JMolecules:DDD:Identity.
+        </description>
+        <cypher><![CDATA[
+	        MATCH
+              (t:Type)-[:EXTENDS|IMPLEMENTS*]->(j:Type),
+              (t)-[:DECLARES]->(m:Method)
+            WHERE
+              j.fqn IN ["org.jmolecules.ddd.types.AggregateRoot", "org.jmolecules.ddd.types.Entity"] AND
+              m.signature ENDS WITH "getId()" AND
+              (m.synthetic IS NULL OR m.synthetic = false)
+            WITH
+              t, m
+            MERGE
+              (t)-[:HAS_IDENTITY]->(m)
+            SET
+              m:JMolecules:DDD:Identity
+            RETURN
+              t AS Type, m AS Identity
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:IdentifiedBySuperClass">
+        <requiresConcept refId="jmolecules-ddd:IdentifiedByAnnotation"/>
+        <requiresConcept refId="jmolecules-ddd:IdentifiedByMethod"/>
+        <requiresConcept refId="jmolecules-ddd:AggregateRootExtend"/>
+        <requiresConcept refId="jmolecules-ddd:AggregateRootType"/>
+        <requiresConcept refId="jmolecules-ddd:EntityExtend"/>
+        <requiresConcept refId="jmolecules-ddd:EntityType"/>
+        <requiresConcept refId="java:MethodOverrides"/>
+        <description>Transfers the :HAS_IDENTITY relation from a base class to its implementing classes.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (baseClass:Type)-[h:HAS_IDENTITY]->(identity:JMolecules:DDD:Identity),
+              (impl:JMolecules:DDD:Identifiable)-[:EXTENDS|IMPLEMENTS*]->(baseClass)
+            WHERE
+              NOT (impl)-[:DECLARES]->(:Method)-[:OVERRIDES*]->(identity) // exclude those classes that override the identity method
+            MERGE
+              (impl)-[:HAS_IDENTITY]->(identity)
+            RETURN
+              impl AS Identifiable, baseClass AS BaseClass, identity AS Identity
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:RepositoryType">
+        <description>Labels all Java types which are annotated by
+            org.jmolecules.ddd.annotation.Repository as :JMolecules:DDD:Repository.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (repository:Type)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn = "org.jmolecules.ddd.annotation.Repository"
+            SET
+              repository:JMolecules:DDD:Repository
+            RETURN
+              repository AS Repository
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:RepositoryExtend">
+        <description>Labels all Java types which extend from
+            org.jmolecules.ddd.types.Repository as :JMolecules:DDD:Repository.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (repository:Type)-[:IMPLEMENTS|EXTENDS*]->(t:Type)
+            WHERE
+              t.fqn = "org.jmolecules.ddd.types.Repository"
+            SET
+              repository:JMolecules:DDD:Repository
+            RETURN
+              repository AS Repository
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:ServiceType">
+        <description>Labels all Java types which are annotated by
+            org.jmolecules.ddd.annotation.Service as :JMolecules:DDD:Service.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (service:Type)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn = "org.jmolecules.ddd.annotation.Service"
+            SET
+              service:JMolecules:DDD:Service
+            RETURN
+              service AS Service
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:ValueObjectType">
+        <description>Labels all Java types which are annotated by
+            org.jmolecules.ddd.annotation.ValueObject as :JMolecules:DDD:ValueObject.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (valueObject:Type)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn = "org.jmolecules.ddd.annotation.ValueObject"
+            SET
+              valueObject:JMolecules:DDD:ValueObject
+            RETURN
+              valueObject AS ValueObject
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:ValueObjectExtend">
+        <description>Labels all Java types which extend from org.jmolecules.ddd.types.ValueObject as
+            :JMolecules:DDD:ValueObject.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (valueObject:Type)-[:IMPLEMENTS|EXTENDS*]->(t:Type)
+            WHERE
+              t.fqn = "org.jmolecules.ddd.types.ValueObject"
+            SET
+              valueObject:JMolecules:DDD:ValueObject
+            RETURN
+              valueObject AS ValueObject
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:BoundedContextPackage">
+        <description>Maps all Java types which are located in a package annotated by
+            org.jmolecules.ddd.annotation.BoundedContext to the corresponding BoundedContext node.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (bCPackage:Package)-[:CONTAINS]->(packageInfo:Type)-[:ANNOTATED_BY]->(a)-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn = "org.jmolecules.ddd.annotation.BoundedContext"
+              AND packageInfo.sourceFileName = "package-info.java"
+            WITH
+              bCPackage, a AS boundedContext
+            OPTIONAL MATCH
+              (boundedContext)-[:HAS]->(name:Value{name: "name"})
+            WITH
+              bCPackage, boundedContext, name.value AS name
+            OPTIONAL MATCH
+              (boundedContext)-[:HAS]->(id:Value{name: "id"})
+            WITH
+              bCPackage, boundedContext, name, id.value AS id
+            WITH
+              bCPackage, boundedContext, name,
+              CASE WHEN id IS NULL THEN bCPackage.fqn ELSE id END AS id
+            OPTIONAL MATCH
+              (boundedContext)-[:HAS]->(desc:Value{name: "description"})
+            WITH
+              bCPackage, boundedContext, name, id, desc.value AS description
+            MERGE
+              (bC:JMolecules:DDD:BoundedContext{identifier: id})
+            SET
+              bC.name = name,
+              bC.description = description
+            WITH
+              bCPackage, bC
+            MATCH
+              (bCPackage)-[:CONTAINS*]->(t:Type)
+            MERGE
+              (bC)-[:CONTAINS]->(t)
+            RETURN
+              bC.identifier AS BoundedContext, count(t) AS Types
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:BoundedContextDependency">
+        <requiresConcept refId="jmolecules-ddd:BoundedContextPackage"/>
+        <description>Propagates the dependencies between Types of different Bounded Contexts to the level of Bounded
+            Contexts including an aggregated weight.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (boundedContext1:JMolecules:DDD:BoundedContext)-[:CONTAINS]->(contextType1:Type),
+              (boundedContext2:JMolecules:DDD:BoundedContext)-[:CONTAINS]->(contextType2:Type),
+              (contextType1)-[d:DEPENDS_ON]->(contextType2)
+            WHERE
+               boundedContext1 <> boundedContext2
+            WITH
+              boundedContext1, boundedContext2, sum(d.weight) AS totalWeight
+            MERGE
+              (boundedContext1)-[d:DEPENDS_ON{weight: totalWeight}]->(boundedContext2)
+            RETURN
+              boundedContext1.name AS Source, sum(d.weight) AS Weight, boundedContext2.name AS Target
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:ModulePackage">
+        <description>Maps all Java types which are located in a package annotated by
+            org.jmolecules.ddd.annotation.Module to the corresponding Module node.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (mPackage:Package)-[:CONTAINS]->(packageInfo:Type)-[:ANNOTATED_BY]->(a)-[:OF_TYPE]->(annotation:Type)
+            WHERE
+              annotation.fqn = "org.jmolecules.ddd.annotation.Module"
+              AND packageInfo.sourceFileName = "package-info.java"
+            WITH
+              mPackage, a AS module
+            OPTIONAL MATCH
+              (module)-[:HAS]->(name:Value{name: "name"})
+            WITH
+              mPackage, module, name.value AS name
+            OPTIONAL MATCH
+              (module)-[:HAS]->(id:Value{name: "id"})
+            WITH
+              mPackage, module, name, id.value AS id
+            WITH
+              mPackage, module, name,
+              CASE WHEN id IS NULL THEN mPackage.fqn ELSE id END AS id
+            OPTIONAL MATCH
+              (module)-[:HAS]->(desc:Value{name: "description"})
+            WITH
+              mPackage, module, name, id, desc.value AS description
+            MERGE
+              (m:JMolecules:DDD:Module{identifier: id})
+            SET
+              m.name = name,
+              m.description = description
+            WITH
+              mPackage, m
+            MATCH
+              (mPackage)-[:CONTAINS*]->(t:Type)
+            MERGE
+              (m)-[:CONTAINS]->(t)
+            RETURN
+              m.identifier AS Module, count(t) AS Types
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-ddd:ModuleDependency">
+        <requiresConcept refId="jmolecules-ddd:ModulePackage"/>
+        <description>Propagates the dependencies between Types of different Modules to the level of Module including an
+            aggregated weight.
+        </description>
+        <cypher><![CDATA[
+            MATCH
+              (m1:JMolecules:DDD:Module)-[:CONTAINS]->(mType1:Type),
+              (m2:JMolecules:DDD:Module)-[:CONTAINS]->(mType2:Type),
+              (mType1)-[d:DEPENDS_ON]->(mType2)
+            WHERE
+               m1 <> m2
+            WITH
+              m1, m2, sum(d.weight) AS totalWeight
+            MERGE
+              (m1)-[d:DEPENDS_ON{weight: totalWeight}]->(m2)
+            RETURN
+              m1.name AS Source, sum(d.weight) AS Weight, m2.name AS Target
+        ]]></cypher>
+    </concept>
+
+    <constraint id="jmolecules-ddd:TypeInMultipleBoundedContexts">
+        <requiresConcept refId="jmolecules-ddd:BoundedContextPackage"/>
+        <description>Checks that a single DDD type is only part of one bounded context.</description>
+        <cypher><![CDATA[
+          MATCH
+            (boundedContext:JMolecules:DDD:BoundedContext)-[:CONTAINS]->(bCType:Type)
+          WITH
+            bCType, collect(boundedContext.name) AS boundedContexts
+          WHERE
+            size(boundedContexts) > 1
+          RETURN
+            bCType.fqn AS Type, boundedContexts AS AssignedBoundedContexts
+        ]]></cypher>
+    </constraint>
+
+    <constraint id="jmolecules-ddd:TypeInMultipleModules">
+        <requiresConcept refId="jmolecules-ddd:ModulePackage"/>
+        <description>Checks that a single DDD type is only part of one module.</description>
+        <cypher><![CDATA[
+          MATCH
+            (module:JMolecules:DDD:Module)-[:CONTAINS]->(mType:Type)
+          WITH
+            mType, collect(module.name) AS modules
+          WHERE
+            size(modules) > 1
+          RETURN
+            mType.fqn AS Type, modules AS AssignedModules
+        ]]></cypher>
+    </constraint>
+
+    <constraint id="jmolecules-ddd:MutableValueObject">
+        <requiresConcept refId="jmolecules-ddd:ValueObjectType"/>
+        <requiresConcept refId="jmolecules-ddd:ValueObjectExtend"/>
+        <description>Checks that fields of a value object are only manipulated via the constructor. The check includes fields from super types.
+        </description>
+        <cypher><![CDATA[
+          MATCH
+            (valueObject:JMolecules:DDD:ValueObject)-[:DECLARES]->(f:Field),
+            (m:Method)-[:WRITES]->(f)
+          WHERE
+            NOT (m:Constructor AND (valueObject)-[:DECLARES]->(m))
+          RETURN
+            valueObject AS ValueObject, f AS MutableField, m AS Method
+          UNION
+          MATCH
+            (valueObject:JMolecules:DDD:ValueObject)-[:EXTENDS|IMPLEMENTS*]->(c)-[:DECLARES]->(f:Field),
+            (m:Method)-[:WRITES]->(f)
+          WHERE
+            NOT (m:Constructor AND (c)-[:DECLARES]->(m))
+          RETURN
+            valueObject AS ValueObject, f AS MutableField, m AS Method
+        ]]></cypher>
+        <report primaryColumn="f"/>
+    </constraint>
+
+    <constraint id="jmolecules-ddd:MutableEntityId">
+        <requiresConcept refId="jmolecules-ddd:IdentifiedBySuperClass"/>
+        <description>Checks that the id field of an entity (identifiable) is only manipulated via the constructor.</description>
+        <cypher><![CDATA[
+          MATCH
+            (identifiable:JMolecules:DDD:Identifiable)-[:HAS_IDENTITY]->(f:Identity:Field),
+            (m:Method)-[:WRITES]->(f)
+          WHERE
+            NOT (m:Constructor AND ((identifiable)-[:DECLARES]->(m) OR (identifiable)-[:EXTENDS|IMPLEMENTS*]->()-[:DECLARES]->(m)))
+          RETURN
+            identifiable AS Identifiable, f AS MutableIdentity, m AS Method
+        ]]></cypher>
+        <report primaryColumn="f"/>
+    </constraint>
+
+    <constraint id="jmolecules-ddd:ValueObjectReferencingEntityOrAggregateRoot">
+        <requiresConcept refId="jmolecules-ddd:AggregateRootExtend"/>
+        <requiresConcept refId="jmolecules-ddd:AggregateRootType"/>
+        <requiresConcept refId="jmolecules-ddd:EntityExtend"/>
+        <requiresConcept refId="jmolecules-ddd:EntityType"/>
+        <requiresConcept refId="jmolecules-ddd:ValueObjectExtend"/>
+        <requiresConcept refId="jmolecules-ddd:ValueObjectType"/>
+        <description>Checks that a :ValueObject does not reference :Entity and :AggregateRoot nodes (identifiable). This check includes super types.</description>
+        <cypher><![CDATA[
+          MATCH
+            (valueObject:JMolecules:DDD:ValueObject)-[:DEPENDS_ON*]->(identifiable:JMolecules:DDD:Identifiable)
+          RETURN
+            valueObject AS ValueObject, identifiable AS Identifiable
+        ]]></cypher>
+    </constraint>
+
+
+</jqassistant-rules>

@@ -1,0 +1,389 @@
+= jqassistant-jmolecules-plugin
+
+
+The jMolecules Plugin provides concepts to map architectural language elements from the jMolecules project
+(https://github.com/xmolecules/jmolecules) to the graph representation build by jQAssistant
+in order to gain new insights, create additional concepts and constraints.
+
+== Usage of the jQAssistant jMolecules Plugin
+
+Please check the documentation of the jMolecules project to see how architectural concepts can be marked in the source code.
+
+Afterwards, to have jQAssistant consider the annotations and to allow the execution of constraints, the following plugin must be declared in th jQAssistant configuration:
+
+[source,yml]
+..jqassistant.yml
+----
+jqassistant:
+  plugins:
+    - group-id: org.jqassistant.plugin
+      artifact-id: jqassistant-jmolecules-plugin
+      version: 2.1.0
+----
+
+== Mapping between jMolecules and jQAssistant
+
+jMolecules comes with a set of different sub-projects, each providing annotations and marker interfaces for different
+architectural aspects. 
+
+The `jqassistant-jmolecules-plugin` provides concepts to map the annotations and interfaces to the graph. For each sub-project, there is a jQAssistant rule group containing all relevant concepts and additional constraints. Following is the mapping between jMolecules and jQAssistant.
+
+
+.Mapping between jMolecules and jQAssistant
+[options="header"]
+|====================
+| jMolecules                                 | jQAssistant
+| jmolecules-cqrs-architecute                | jmolecules-cqrs:Default
+| jmolecules-hexagonal-architecture          | jmolecules-hexagonal:Default
+|                                            | jmolecules-hexagonal:Strict
+| jmolecules-layered-architecture            | jmolecules-layered:Default
+|                                            | jmolecules-layered:Strict
+| jmolecules-onion-architecture (Classical)  | jmolecules-onion-classical:Default
+|                                            | jmolecules-onion-classical:Strict
+| jmolecules-onion-architecture (Simplified) | jmolecules-onion-simplified:Default
+|                                            | jmolecules-onion-simplified:Strict
+| jmolecules-ddd                             | jmolecules-ddd:Default
+|                                            | jmolecules-ddd:Strict
+| jmolecules-event                           | jmolecules-event:Default
+|====================
+
+
+In order to make use of the provided concepts, the respective groups need to be added to the plugin configuration as following:
+
+[source,yml]
+..jqassistant.yml
+----
+jqassistant:
+  plugins:
+    - group-id: org.jqassistant.plugin
+      artifact-id: jqassistant-jmolecules-plugin
+      version: 2.1.0
+  analyze:
+    groups: <1>
+      - jmolecules-cqrs:Default
+      - jmolecules-hexagonal:Default
+      - jmolecules-hexagonal:Strict
+      - jmolecules-layered:Default
+      - jmolecules-layered:Strict
+      - jmolecules-onion-classical:Default
+      - jmolecules-onion-classical:Strict
+      - jmolecules-onion-simplified:Default
+      - jmolecules-onion-simplified:Strict
+      - jmolecules-ddd:Default
+      - jmolecules-ddd:Strict
+      - jmolecules-event:Default
+----
+<1> Definition of the rules to be used
+
+== Concepts and Constraints for the Hexagonal Architecture
+* The concepts mentioned in this section are used for `jmolecules-architecture-hexagonal`
+* The concepts mentioned in this section are part of `jmolecules-hexagonal:Default` or `jmolecules-hexagonal:Strict`
+* `jmolecules-hexagonal:Strict` contains `jmolecules-hexagonal:Default`
+* For each Port or Adapter, each qualified by type (Primary/Secondary/Unqualified) and name (defaults to Type or Package name, depending on the annotation used), as well as for the Application Core, a node will be created. Types will be assigned to the node via a `:IMPLEMENTED_BY` (Port/Adapter) or `:CONTAINS` (Application Core) relation
+* Dependencies between types will be aggreagted to the level of hexagonal aspects
+
+Supported Annotations and Types:
+
+* Adapter|PrimaryAdapter|SecondaryAdapter
+** Supported as Package- and Type-Annotation
+** Applied Labels: `:JMolecules:Architecture:Hexagonal:Adapter`
+** The type of the adapter (Primary,Secondary,Unqualified) will be set as property to the node
+** The property `name` is suported, it'll be set as property on the created node
+** Default values for `name`: Simple type name of the annotated class or simple name of the annotated package, respectively
+** Types will be assigned to the created nodes via a `(:Adapter)-[:IMPLEMENTED_BY]->(:Type)` relation
+
+* Port|PrimaryPort|SecondaryPort
+** Supported as Package- and Type-Annotation
+** Applied Labels: `:JMolecules:Architecture:Hexagonal:Port`
+** The type of the port (Primary,Secondary,Unqualified) will be set as property to the node
+** The property `name` is suported, it'll be set as property on the created node
+** Default values for `name`: Simple type name of the annotated class or simple name of the annotated package, respectively
+** Types will be assigned to the created nodes via a `(:Port)-[:IMPLEMENTED_BY]->(:Type)` relation
+
+* Application
+** Supported as Package- and Type-Annotation
+** Applied labels: `:JMolecules:Architecture:Hexgonal:ApplicationCore`
+** Types will be assigned to the created node via a `(:ApplicationCore)-[:CONTAINS]->(:Type)` relation
+
+Additionally, the dependencies between types will be aggregated to the level of hexagonal aspects including a weight, giving how many dependencies between aspects exist.
+
+Additionally, ports will be assigned to the application core via a `(:ApplicationCore)-[:HAS_PORT]->(:Port)` relation.
+
+Constraint:
+
+* jmolecules-hexagonal:TypeAssignedToMultipleHexagonalAspects (strict-group)
+** Checks that each type is part of only one port or adapter
+* jmolecules-hexagonal:PortMustBePartOfApplicationCore (strict-group)
+** Checks that ports are located inside the application core
+* jmolecules-hexagonal:AdapterMustNotBePartOfApplicationCore (strict-group)
+** Checks that adapters are located outside the application core
+* jmolecules-hexagonal:IllegalAccessToPrimaryPort (strict-group)
+** Checks that primary/unqualified ports are only accessed by primary/unqualified adapters and ports
+* jmolecules-hexagonal:IllegalAccessToSecondaryPort (strict-group)
+** Checks that secondary/unqualified ports are only accessed by the application core and secondary/unqualified adapters and ports
+* jmolecules-hexagonal:AdapterMustOnlyBeAccessedBySameAdapterType (strict-group)
+** Checks that adapters are only accessed by the adapters of the same type, or, in case of an unqualified adapter, any adapter type
+* jmolecules-hexagonal:AdapterMustOnlyBeAccessedBySameAdapter (strict-group)
+** Checks that adapters are only accessed by the adapters of the same type and name
+* jmolecules-hexagonal:ApplicationCoreMustOnlyDependOnItself (strict-group)
+** Checks that the application core only depends on itself, excluding library types
+* jmolecules-hexagonal:UseOfUnqualifiedAdapterOrPort (strict-group)
+** Checks that the type ports and adapters is always qualified, so the PrimaryAdapter/SecondaryAdapter or PrimaryPort/SecondaryPort annotations are used
+
+== Concepts and Constraints for the Layered Architecture
+* The concepts mentioned in this section are used for `jmolecules-architecture-layered`
+* The concepts mentioned in this section are part of `jmolecules-layered:Default` or `jmolecules-layered:Strict`
+* `jmolecules-layered:Strict` contains `jmolecules-layered:Default`
+* For each technical layer, a node will be created, to which all types will be associated via a `:CONTAINS` relationship
+* Dependencies between types will be aggregated to the level of technical layers using a `:DEPENDS_ON` relation
+* When using the strict-group, allowed dependencies between the layers will be added to the graph using a `:DEFINES_DEPENDENCY` relation
+
+Supported Annotations and Types:
+
+* InterfaceLayer
+** Supported as Package- and Type-Annotation
+** Applied Labels: `:JMolecules:Architecture:Layered:Layer(name: 'Interface')`
+
+* ApplicationLayer
+** Supported as Package- and Type-Annotation
+** Applied Labels: `:JMolecules:Architecture:Layered:Layer(name: 'Application')`
+
+* DomainLayer
+** Supported as Package- and Type-Annotation
+** Applied Labels: `:JMolecules:Architecture:Layered:Layer(name: 'Domain')`
+
+* InfrastructureLayer
+** Supported as Package- and Type-Annotation
+** Applied Labels: `:JMolecules:Architecture:Layered:Layer(name: 'Infrastructure')`
+
+Additionally, the dependencies between types will be aggregated to the level of Layers including a weight, giving how many dependencies between layers exist.
+
+Constraint:
+
+* jmolecules-layered:TypeInMultipleLayers
+** Checks that each type is part of only one layer
+* jmolecules-layered:IllegalLayerDependency (strict-group)
+** Checks that dependencies between layers only exist where allowed
+
+== Concepts for Onion Architecture
+=== Classical Onion Architecture
+
+* The concepts mentioned in this section are used for `jmolecules-architecture-onion`
+* The concepts mentioned in this section are part of `jmolecules-onion-classical:Default` or `jmolecules-onion-classical:Strict`
+* `jmolecules-onion-classical:Strict` contains `jmolecules-onion-classical:Default`
+* For each ring, a node will be created, to which all types will be associated via a `:CONTAINS` relationship
+* Dependencies between types will be aggregated to the level of technical rings using a `:DEPENDS_ON` relation
+* When using the strict-group, allowed dependencies between the rings will be added to the graph using a `:DEFINES_DEPENDENCY` relation
+
+Supported Annotations and Types:
+
+* ApplicationServiceRing
+** Supported as Package- and Type-Annotation
+** Applied Labels: `:JMolecules:Architecture:Onion:Ring(name: 'ApplicationService')`
+
+* DomainServiceRing
+** Supported as Package- and Type-Annotation
+** Applied Labels: `:JMolecules:Architecture:Onion:Ring(name: 'DomainService')`
+
+* DomainModelRing
+** Supported as Package- and Type-Annotation
+** Applied Labels: `:JMolecules:Architecture:Onion:Ring(name: 'DomainModel')`
+
+* InfrastructureRing
+** Supported as Package- and Type-Annotation
+** Applied Labels: `:JMolecules:Architecture:Onion:Ring(name: 'Infrastructure')`
+
+
+Additionally, the dependencies between types will be aggregated to the level of Rings including a weight, giving how many dependencies between rings exist.
+
+Constraint:
+
+* jmolecules-onion-classical:TypeInMultipleRings
+** Checks that each type is part of only one ring
+* jmolecules-onion-classical:IllegalRingDependency (strict-group)
+** Checks that dependencies between rings only exist where allowed
+
+=== Simplified Onion Architecture
+* The concepts mentioned in this section are used for `jmolecules-architecture-onion`
+* The concepts mentioned in this section are part of `jmolecules-onion-simplified:Default`
+* For each ring, a node will be created, to which all types will be associated via a `:CONTAINS` relationship
+* Dependencies between types will be aggregated to the level of technical rings using a `:DEPENDS_ON` relation
+* When using the strict-group, allowed dependencies between the rings will be added to the graph using a `:DEFINES_DEPENDENCY` relation
+
+Supported Annotations and Types:
+
+* ApplicationRing
+** Supported as Package- and Type-Annotation
+** Applied Labels: `:JMolecules:Architecture:Onion:Ring(name: 'Application')`
+
+* DomainRing
+** Supported as Package- and Type-Annotation
+** Applied Labels: `:JMolecules:Architecture:Onion:Ring(name: 'Domain')`
+
+* InfrastructureRing
+** Supported as Package- and Type-Annotation
+** Applied Labels: `:JMolecules:Architecture:Onion:Ring(name: 'Infrastructure')`
+
+Additionally, the dependencies between types will be aggregated to the level of Rings including a weight, giving how many dependencies between rings exist.
+
+Constraint:
+
+* jmolecules-onion-simplified:TypeInMultipleRings
+** Checks that each type is part of only one ring
+* jmolecules-onion-simplified:IllegalRingDependency (strict-group)
+** Checks that dependencies between rings only exist where allowed
+
+== Concepts for Domain-Driven Design
+* The concepts mentioned in this section are used for `jmolecules-ddd`
+* The concepts mentioned in this section are part of `jmolecules-ddd:Default` or `jmolecules-ddd:Strict`
+
+Supported Annotations and Types:
+
+* AggregateRoot
+** Supported as Type-Annotation and Interface
+** Applied Labels: `:JMolecules:DDD:Identifiable:Entity:AggregateRoot`
+
+* BoundedContext
+** Supported as Package-Annotation
+** Per BoundedContext (unique by id), a node will be created representing the bounded context. Types will be linked via a `:CONTAINS` relationship.
+** Applied Labels: `:JMolecules:DDD:BoundedContext`
+** The properties `id`, `name`, and `description` are supported
+** In case the id is missing, the package name will be used
+
+* Entity
+** Supported as Type-Annotation and Interface
+** Applied Labels: `:JMolecules:DDD:Identifiable:Entity`
+
+* Identifier
+** Supported as Interface
+** Applied Labels: `:JMolecules:DDD:Identifier
+
+* Identity
+** Supported as Field- and Method-Annotation and via `Entity` and `AggregateRoot`-Interfaces (via the `getId` method)
+** Created relations: `:HAS_IDENTITY` towards a :Field- or :Method-node (:Member)
+** The relation will be transferred from super- to implementing types in case they don't override the `getId` method
+
+* Factory
+** Supported as Type-Annotation
+** Applied Labels: `:JMolecules:DDD:Factory`
+
+* Module
+** Supported as Package-Annotation
+** Per Module (unique by id), a node will be created representing the module. Types will be linked via a `:CONTAINS` relationship.
+** Applied Labels: `:JMolecules:DDD:Modules`
+** The properties `id`, `name`, and `description` are supported
+** In case the id is missing, the package name will be used
+
+* Repository
+** Supported as Type-Annotation and Interface
+** Applied Labels: `:JMolecules:DDD:Repository`
+
+* Service
+** Supported as Type-Annotation
+** Applied Labels: `:JMolecules:DDD:Service`
+
+* ValueObject
+** Supported as Type-Annotation and Interface
+** Applied Labels: `:JMolecules:DDD:ValueObject`
+
+
+Additionally, the dependencies between types will be aggregated to the level of BoundedContexts and Modules including a weight, giving how many dependencies between BoundedContext or Modules, respectively, exist.
+
+Constraint:
+
+* jmolecules-ddd:TypeInMultipleBoundedContexts
+** Checks that each type is part of only one bounded context
+* jmolecules-ddd:TypeInMultipleModules
+** Checks that each type is part of only one module
+* jmolecules-ddd:MutableValueObject
+** Checks that values in ValueObjects are only manipulated via a constructor in the declaring class
+* jmolecules-ddd:MutableEntityId
+** Checks that the `:Field` identified by `:HAS_IDENTITY` in `:Identifiable` nodes is only manipulated via a constructor in the declaring class
+* jmolecules-ddd:ValueObjectReferencingEntityOrAggregateRoot
+** Checks that a `:ValueObject` is not referencing a `:Entity` or `:AggregateRoot` (`:Identifiable`)
+* jmolecules-ddd:NonFinalFieldInValueObject (strict-group)
+** Checks that values in ValueObjects final
+* jmolecules-ddd:NonFinalEntityId (strict-group)
+** Checks that the `:Field` identified by `:HAS_IDENTITY` in `:Identifiable` nodes is final
+* jmolecules-ddd:IllegalDependenciesBetweenBoundedContexts (strict-group)
+** Checks that `:DEPENDS_ON` relations between `:BoundedContext` nodes only exist where also `:DEFINES_DEPENDENCY` exists
+** Note: Allowed dependencies need to be provided using a custom concept which specifies the provided concept: `jmolecules-ddd:AllowedBoundedContextDependency`
+** Note: This can also be accomplished by using the https://github.com/jqassistant-contrib/jqassistant-context-mapper-plugin[jqassistant-context-mapper-plugin]
+
+== Concepts for CQRS
+* The concepts mentioned in this section are used for `jmolecules-cqrs`
+* The concepts mentioned in this section are part of `jmolecules-cqrs:Default`
+
+* QueryModel
+** Supported as Type-Annotation
+** Applied Labels: `:JMolecules:CQRS:QueryModel`
+
+* Command
+** Supported as Type-Annotation
+** Applied Labels: `:JMolecules:CQRS:Command`
+** The properties `name` and `namespace` are supported, they'll be added to the type node as `commandName` and `commandNamespace`, respectively
+*** Default values for `commandName`: Simple Type Name of the annotated class
+*** Default values for `commandNamespace`: Fully-qualified name of the package containing the annotated class
+
+* CommandHandler
+** Supported as Method-Annotation
+** Applied Labels: `JMolecules:CQRS:CommandHandler`
+** The properties `name` and `namespace` are supported to match the handled commands, '*' is allowed as a placeholder to match all
+** The relationship `(:CommandHandler)-[:HANDLES]->(:Command)` is established via the specified properties, or, alternatively, via the method parameter
+*** See the official jMolecules JavaDoc for further details
+
+* CommandDispatcher
+** Supported as Method-Annotation
+** Applied Labels: `:JMolecules:CQRS:CommandDispatcher`
+** The property `dispatches` is supported to match the published command via '<namespace>.<name>'
+*** See the official jMolecules JavaDoc for further details
+
+== Concepts for Events
+* The concepts mentioned in this section are used for `jmolecules-event`
+* The concepts mentioned in this section are part of `jmolecules-event:Default`
+
+* DomainEvent
+** Supported as Type-Annotation and Interface
+** Applied Labels: `:JMolecules:Event:DomainEvent`
+** The properties `name` and `namespace` are supported, they'll be added to the type node as `eventName` and `eventNamespace`, respectively
+*** Default values for `eventName`: Simple Type Name of the annotated class
+*** Default values for `eventNamespace`: Fully-qualified name of the package containing the annotated class
+
+* Externalized
+** Supported as Type-Annotation and Interface
+** Applied Labels: `:Externalized`
+*** Note: This is applied to identified `:DomainEvent`s only
+
+* DomainEventHandler
+** Supported as Method-Annotation
+** Applied Labels: `JMolecules:Event:DomainEventHandler`
+** The properties `name` and `namespace` are supported to match the handled events, '*' is allowed as a placeholder to match all
+** The relationship `(:DomainEventHandler)-[:HANDLES]->(:DomainEvent)` is established via the specified properties, or, alternatively, via the method parameter
+*** See the official jMolecules JavaDoc for further details
+
+* DomainEventPublisher
+** Supported as Method-Annotation
+** Applied Labels: `:JMolecules:Event:DomainEventPublisher`
+** The property `publishes` is supported to match the published event via '<namespace>.<name>'
+*** See the official jMolecules JavaDoc for further details
+** The property `type` is supported and will be enriched on the `:PUBLISHES` relationship
+
+== Visual Reporting
+
+=== PlantUML-Reporting
+The jMolecules plug-in supports visualization of concepts using the `jqassistant-plantuml-report-plugin` for the following concepts:
+
+* Bounded Context
+* Module
+* Ring (both for classical and simplified Onion Architecture)
+* Layer (Interface, Application, Domain, Infrastructure)
+
+To use this functionality, define the jQAssistant concept with the following property set:
+
+* `reportType="plantuml-component-diagram"`
+
+=== Context Mapper-Reporting
+
+The jMolecules plug-in works well with the `jqassistant-context-mapper-plugin` to visualize Bounded Contexts identified via jMolecules as a context map.
+
+For further details, see the https://github.com/jqassistant-plugin/jqassistant-context-mapper-plugin[project page].

@@ -1,0 +1,52 @@
+<jqassistant-rules xmlns="http://schema.jqassistant.org/rule/v1.10">
+
+    <group id="jmolecules-layered:Strict">
+        <includeConcept refId="jmolecules-layered:AllowedLayerDependency"/>
+        <includeConstraint refId="jmolecules-layered:IllegalLayerDependency"/>
+        <includeGroup refId="jmolecules-layered:Default"/>
+    </group>
+
+    <concept id="jmolecules-layered:AllowedLayerDependency">
+        <requiresConcept refId="jmolecules-layered:PrepareLayer"/>
+        <description>Creates a :DEFINES_DEPENDENCY relation between :Layer nodes for each allowed dependency.</description>
+        <cypher><![CDATA[
+            WITH
+              [
+                ["Interface", "Application"], ["Interface", "Domain"], ["Interface", "Infrastructure"],
+                ["Application", "Domain"], ["Application", "Infrastructure"],
+                ["Domain", "Infrastructure"]
+            ] AS allowedDependencies
+          UNWIND
+            allowedDependencies AS allowedDependency
+          MATCH
+            (dependentLayer:JMolecules:Architecture:Layered:Layer{name: allowedDependency[0]}),
+            (dependencyLayer:JMolecules:Architecture:Layered:Layer{name: allowedDependency[1]})
+          MERGE
+            (dependentLayer)-[:DEFINES_DEPENDENCY]->(dependencyLayer)
+          RETURN
+            dependentLayer AS Source, dependencyLayer AS Target
+        ]]></cypher>
+    </concept>
+
+    <constraint id="jmolecules-layered:IllegalLayerDependency">
+        <requiresConcept refId="jmolecules-layered:AllowedLayerDependency"/>
+        <requiresConcept refId="jmolecules-layered:LayerDependency"/>
+        <description>Checks that only allowed dependencies between layers are implemented.</description>
+        <cypher><![CDATA[
+          MATCH
+            (dependentLayer:JMolecules:Architecture:Layered:Layer)-[:DEPENDS_ON]->(dependencyLayer:JMolecules:Architecture:Layered:Layer),
+            (dependentLayer)-[:CONTAINS]->(t1:Type),
+            (dependencyLayer)-[:CONTAINS]->(t2:Type),
+            (t1)-[:DEPENDS_ON]->(t2)
+          WHERE
+            dependentLayer <> dependencyLayer AND
+            NOT EXISTS((dependentLayer)-[:DEFINES_DEPENDENCY]->(dependencyLayer))
+          RETURN
+            dependentLayer AS SourceLayer, dependencyLayer AS TargetLayer, t1 AS SourceType, t2 AS TargetType
+          ORDER BY
+            SourceLayer.name, TargetLayer.name
+        ]]></cypher>
+        <report primaryColumn="SourceType"/>
+    </constraint>
+
+</jqassistant-rules>
