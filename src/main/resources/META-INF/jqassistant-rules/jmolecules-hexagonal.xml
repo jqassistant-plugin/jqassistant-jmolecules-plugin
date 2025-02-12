@@ -43,7 +43,7 @@
               core, type, [(type)-[:DECLARES*]->(inner:Type:Java) | inner] AS inners
             FOREACH (inner IN inners |
               MERGE
-                (port)-[:CONTAINS]->(inner)
+                (core)-[:CONTAINS]->(inner)
             )
             RETURN
               type AS CoreType
