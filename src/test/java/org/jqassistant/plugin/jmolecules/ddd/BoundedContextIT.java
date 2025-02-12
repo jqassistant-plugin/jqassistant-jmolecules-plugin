@@ -40,4 +40,15 @@ public class BoundedContextIT extends AbstractJMoleculesPluginIT {
         store.commitTransaction();
     }
 
+    @Test
+    public void boundedContextTestDependency() throws RuleException {
+        scanClassPathDirectory(getClassesDirectory(App.class));
+        query("MATCH (artifact:Artifact) SET artifact:Test");
+        assertEquals(Result.Status.WARNING, applyConcept("jmolecules-ddd:BoundedContextDependency").getStatus());
+        store.beginTransaction();
+        assertThat(query("MATCH (:JMolecules:DDD:BoundedContext)-[d:DEPENDS_ON]->(:JMolecules:DDD:BoundedContext) RETURN d").getRows().size()).isEqualTo(0);
+        assertThat(query("MATCH (:JMolecules:DDD:BoundedContext{name: 'order'})-[d:DEPENDS_ON]->(:JMolecules:DDD:BoundedContext{name: 'catalog'}) RETURN d").getRows().size()).isEqualTo(0);
+        store.commitTransaction();
+    }
+
 }
