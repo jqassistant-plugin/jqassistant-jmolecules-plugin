@@ -51,7 +51,7 @@
     </licenses>
 
     <properties>
-        <jmolecules.version>1.9.0</jmolecules.version>
+        <jmolecules.version>1.10.0</jmolecules.version>
     </properties>
 
     <dependencies>
