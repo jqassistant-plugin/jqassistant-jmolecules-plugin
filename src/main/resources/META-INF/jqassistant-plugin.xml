@@ -1,5 +1,5 @@
 <jqassistant-plugin xmlns="http://schema.jqassistant.org/plugin/v1.10" name="jQAssistant jMolecules Plug-In">
-    <description>Provides shared rules for jMolecules.</description>
+    <description>${project.description}</description>
     <model>
         <class>org.jqassistant.plugin.jmolecules.descriptor.JMoleculesDescriptor</class>
         <class>org.jqassistant.plugin.jmolecules.descriptor.architecture.ArchitectureDescriptor</class>
