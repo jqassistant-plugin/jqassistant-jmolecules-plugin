@@ -10,12 +10,10 @@
 
     <artifactId>jqassistant-jmolecules-plugin</artifactId>
     <version>2.1.0-SNAPSHOT</version>
-    <name>jQAssistant jMolecules Plugin</name>
 
-    <url>http://jqassistant.org/</url>
-    <description>
-        The jQAssistant plugin providing shared rules for jMolecules.
-    </description>
+    <name>jQAssistant jMolecules Plugin</name>
+    <description>The jQAssistant plugin providing shared rules for jMolecules.</description>
+    <url>https://github.com/jqassistant-plugin/jqassistant-jmolecules-plugin</url>
 
     <organization>
         <name>BUSCHMAIS GbR</name>
