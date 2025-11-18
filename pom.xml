@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.jqassistant.plugin</groupId>
         <artifactId>parent</artifactId>
-        <version>2.5.0</version>
+        <version>2.8.0</version>
     </parent>
 
     <artifactId>jqassistant-jmolecules-plugin</artifactId>
@@ -49,25 +49,39 @@
     </licenses>
 
     <properties>
-        <jmolecules.version>1.9.0</jmolecules.version>
+        <jmolecules.version>2.0.0</jmolecules.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>com.buschmais.jqassistant.plugin</groupId>
             <artifactId>java</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.buschmais.jqassistant.plugin</groupId>
+            <artifactId>json</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.buschmais.xo</groupId>
             <artifactId>xo.api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.buschmais.jqassistant.core</groupId>
+            <artifactId>scanner</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.buschmais.jqassistant.core</groupId>
             <artifactId>report</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.buschmais.jqassistant.core</groupId>
             <artifactId>store</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.jmolecules</groupId>
@@ -97,53 +111,43 @@
         <dependency>
             <groupId>com.buschmais.jqassistant.core</groupId>
             <artifactId>test</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.buschmais.jqassistant.plugin</groupId>
             <artifactId>java</artifactId>
             <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-params</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>java-hamcrest</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>com.buschmais.jqassistant.plugin</groupId>
-                <artifactId>java</artifactId>
-                <version>${com.buschmais.jqassistant.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.buschmais.jqassistant.core</groupId>
-                <artifactId>report</artifactId>
-                <version>${com.buschmais.jqassistant.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.buschmais.jqassistant.core</groupId>
-                <artifactId>store</artifactId>
-                <version>${com.buschmais.jqassistant.version}</version>
-                <scope>provided</scope>
-            </dependency>
             <dependency>
                 <groupId>org.jmolecules</groupId>
                 <artifactId>jmolecules-ddd</artifactId>
