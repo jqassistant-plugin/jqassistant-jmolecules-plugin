@@ -14,7 +14,15 @@
         <class>org.jqassistant.plugin.jmolecules.descriptor.ddd.BoundedContextDescriptor</class>
         <class>org.jqassistant.plugin.jmolecules.descriptor.ddd.DDDDescriptor</class>
         <class>org.jqassistant.plugin.jmolecules.descriptor.ddd.ModuleDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypesFileDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeAssignmentDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeGroupDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.repository.StereotypeRepository</class>
     </model>
+    <scanner>
+        <class>org.jqassistant.plugin.jmolecules.scanner.stereotype.StereotypesFileScanner</class>
+    </scanner>
     <rules>
         <resource>jmolecules-cqrs.xml</resource>
         <resource>jmolecules-ddd.xml</resource>

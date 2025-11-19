@@ -107,6 +107,11 @@
             <groupId>org.jmolecules</groupId>
             <artifactId>jmolecules-events</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
         <!-- Test dependencies -->
         <dependency>
             <groupId>com.buschmais.jqassistant.core</groupId>

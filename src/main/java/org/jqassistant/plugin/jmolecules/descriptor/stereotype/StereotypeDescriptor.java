@@ -1,0 +1,20 @@
+package org.jqassistant.plugin.jmolecules.descriptor.stereotype;
+
+import java.util.List;
+
+import com.buschmais.xo.neo4j.api.annotation.Label;
+import com.buschmais.xo.neo4j.api.annotation.Relation;
+
+import org.jqassistant.plugin.jmolecules.descriptor.JMoleculesDescriptor;
+
+@Label("Stereotype")
+public interface StereotypeDescriptor extends JMoleculesDescriptor {
+
+    @Relation("HAS_ASSIGNMENT")
+    List<StereotypeAssignmentDescriptor> getStereotypeAssignments();
+
+    int getPriority();
+
+    void setPriority(int priority);
+
+}
