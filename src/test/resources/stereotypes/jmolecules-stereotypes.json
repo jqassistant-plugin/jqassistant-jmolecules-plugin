@@ -1,0 +1,21 @@
+{
+  "stereotypes": {
+    "test.Stereotype": {
+      "assignments": [
+        "@org.jqassistant.plugin.jmolecules.set.stereotype.ATestStereotype",
+        "org.jqassistant.plugin.jmolecules.set.stereotype.ITestStereotype"
+      ],
+      "groups": [
+        "test"
+      ],
+      "priority": 30
+    }
+  },
+  "groups": {
+    "test": {
+      "displayName": "Test",
+      "priority": 100,
+      "type": "business"
+    }
+  }
+}

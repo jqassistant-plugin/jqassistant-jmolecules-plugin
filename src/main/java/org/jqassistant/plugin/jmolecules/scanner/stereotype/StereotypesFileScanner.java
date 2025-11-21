@@ -97,6 +97,7 @@ public class StereotypesFileScanner extends AbstractScannerPlugin<FileResource, 
     private static StereotypeGroupDescriptor mapStereotypeGroup(String name, StereotypeGroupDTO stereotypeGroupDTO, StereotypeRepository stereotypeRepository) {
         StereotypeGroupDescriptor stereotypeGroupDescriptor = getStereotypeGroup(name, stereotypeRepository);
         stereotypeGroupDescriptor.setDisplayName(stereotypeGroupDTO.getDisplayName());
+        stereotypeGroupDescriptor.setPriority(stereotypeGroupDTO.getPriority());
         stereotypeGroupDescriptor.setType(stereotypeGroupDTO.getType());
         return stereotypeGroupDescriptor;
     }

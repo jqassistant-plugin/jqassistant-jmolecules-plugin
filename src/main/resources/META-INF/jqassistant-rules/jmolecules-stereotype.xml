@@ -1,0 +1,47 @@
+<jqassistant-rules xmlns="http://schema.jqassistant.org/rule/v1.10">
+
+    <concept id="jmolecules-stereotype:TypeHasStereotype">
+        <description>.</description>
+        <cypher><![CDATA[
+          MATCH
+            (type:Java:Type)-[:HAS_STEREOTYPE]->(stereotype:JMolecules:Stereotype)
+          RETURN
+            stereotype as Stereotype, type AS Type
+          ORDER BY
+            stereotype.name, type.fqn
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-stereotype:TypeHasStereotypeByAssignability">
+        <providesConcept refId="jmolecules-stereotype:TypeHasStereotype"/>
+        <requiresConcept refId="java:TypeAssignableFrom"/>
+        <description>.</description>
+        <cypher><![CDATA[
+            MATCH
+              (stereotype:JMolecules:Stereotype)-[:HAS_ASSIGNMENT]->(assignment:JMolecules:StereotypeAssignment{type:"ASSIGNABLE_FROM"}),
+              (:Type{fqn:assignment.value})-[:ASSIGNABLE_FROM]->(type:Java:Type)
+            MERGE
+              (type)-[:HAS_STEREOTYPE]->(stereotype)
+            RETURN
+              stereotype, type
+            ORDER BY
+              stereotype.name, type.fqn
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-stereotype:TypeHasStereotypeByAnnotation">
+        <providesConcept refId="jmolecules-stereotype:TypeHasStereotype"/>
+        <description>.</description>
+        <cypher><![CDATA[
+            MATCH
+              (stereotype:JMolecules:Stereotype)-[:HAS_ASSIGNMENT]->(assignment:JMolecules:StereotypeAssignment{type:"ANNOTATED_BY"}),
+              (type:Java:Type)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(:Type{fqn:assignment.value})
+            MERGE
+              (type)-[:HAS_STEREOTYPE]->(stereotype)
+            RETURN
+              stereotype, type
+            ORDER BY
+              stereotype.name, type.fqn
+        ]]></cypher>
+    </concept>
+</jqassistant-rules>

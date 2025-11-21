@@ -11,5 +11,7 @@ public class StereotypeGroupDTO {
 
     private String displayName;
 
+    private int priority;
+
     private String type;
 }

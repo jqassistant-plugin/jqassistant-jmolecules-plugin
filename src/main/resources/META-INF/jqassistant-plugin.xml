@@ -22,6 +22,7 @@
     </model>
     <scanner>
         <class>org.jqassistant.plugin.jmolecules.scanner.stereotype.StereotypesFileScanner</class>
+        <class>org.jqassistant.plugin.jmolecules.scanner.stereotype.PluginStereotypesScanner</class>
     </scanner>
     <rules>
         <resource>jmolecules-cqrs.xml</resource>
@@ -36,5 +37,6 @@
         <resource>jmolecules-onion-simplified-strict.xml</resource>
         <resource>jmolecules-onion-classical.xml</resource>
         <resource>jmolecules-onion-classical-strict.xml</resource>
+        <resource>jmolecules-stereotype.xml</resource>
     </rules>
 </jqassistant-plugin>
