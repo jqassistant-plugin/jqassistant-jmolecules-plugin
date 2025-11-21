@@ -49,7 +49,7 @@
     </licenses>
 
     <properties>
-        <jmolecules.version>2.0.0</jmolecules.version>
+        <jmolecules.version>2.0.1</jmolecules.version>
     </properties>
 
     <dependencies>
