@@ -70,22 +70,24 @@ public class StereotypeIT extends AbstractJMoleculesPluginIT {
 
         getScanner().scan(uri, uri.toString(), DefaultScope.NONE);
 
-        List<StereotypesFileDescriptor> stereotypesFiles = query(
-                "MATCH (stereotypesFile:Json:JMolecules:Stereotypes{valid:true}) RETURN stereotypesFile").getColumn("stereotypesFile");
-        assertThat(stereotypesFiles).allSatisfy(stereotypesFile -> {
-            assertThat(stereotypesFile.getFileName()).startsWith("/")
-                    .endsWith("META-INF/jmolecules-stereotypes.json");
-            assertThat(stereotypesFile).isInstanceOf(URIDescriptor.class)
-                    .satisfies(uriDescriptor -> {
-                        assertThat(((URIDescriptor) uriDescriptor).getUri()).startsWith("jar:file:/")
-                                .endsWith("META-INF/jmolecules-stereotypes.json");
-                    });
-        });
-        List<StereotypeGroupDescriptor> groups = query(
-                "MATCH (:Json:JMolecules:Stereotypes)-[:DECLARES_STEREOTYPE_GROUP]->(group:JMolecules:StereotypeGroup) RETURN group").getColumn("group");
-        assertThat(groups).anySatisfy(ddd -> {
-            assertThat(ddd.getName()).isEqualTo("ddd");
-            assertThat(ddd.getDisplayName()).isEqualTo("Domain-Driven Design");
+        store.requireTransaction(() -> {
+            List<StereotypesFileDescriptor> stereotypesFiles = query(
+                    "MATCH (stereotypesFile:Json:JMolecules:Stereotypes{valid:true}) RETURN stereotypesFile").getColumn("stereotypesFile");
+            assertThat(stereotypesFiles).allSatisfy(stereotypesFile -> {
+                assertThat(stereotypesFile.getFileName()).startsWith("/")
+                        .endsWith("META-INF/jmolecules-stereotypes.json");
+                assertThat(stereotypesFile).isInstanceOf(URIDescriptor.class)
+                        .satisfies(uriDescriptor -> {
+                            assertThat(((URIDescriptor) uriDescriptor).getUri()).startsWith("jar:file:/")
+                                    .endsWith("META-INF/jmolecules-stereotypes.json");
+                        });
+            });
+            List<StereotypeGroupDescriptor> groups = query(
+                    "MATCH (:Json:JMolecules:Stereotypes)-[:DECLARES_STEREOTYPE_GROUP]->(group:JMolecules:StereotypeGroup) RETURN group").getColumn("group");
+            assertThat(groups).anySatisfy(ddd -> {
+                assertThat(ddd.getName()).isEqualTo("ddd");
+                assertThat(ddd.getDisplayName()).isEqualTo("Domain-Driven Design");
+            });
         });
     }
 
