@@ -6,10 +6,8 @@ import com.buschmais.jqassistant.plugin.common.api.model.NamedDescriptor;
 import com.buschmais.xo.neo4j.api.annotation.Label;
 import com.buschmais.xo.neo4j.api.annotation.Relation;
 
-import org.jqassistant.plugin.jmolecules.descriptor.JMoleculesDescriptor;
-
-@Label("StereotypeGroup")
-public interface StereotypeGroupDescriptor extends JMoleculesDescriptor, PriorityTemplate, NamedDescriptor {
+@Label("Group")
+public interface StereotypeGroupDescriptor extends StereotypeDescriptor, PriorityTemplate, NamedDescriptor {
 
     String getDisplayName();
 
@@ -20,6 +18,6 @@ public interface StereotypeGroupDescriptor extends JMoleculesDescriptor, Priorit
     void setType(String type);
 
     @Relation("CONTAINS")
-    List<StereotypeDescriptor> getContainsStereotypes();
+    List<StereotypeDefinitionDescriptor> getContainsStereotypes();
 
 }

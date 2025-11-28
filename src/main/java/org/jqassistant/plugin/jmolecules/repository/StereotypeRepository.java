@@ -4,17 +4,17 @@ import com.buschmais.xo.api.annotation.Repository;
 import com.buschmais.xo.api.annotation.ResultOf;
 import com.buschmais.xo.neo4j.api.annotation.Cypher;
 
-import org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeDescriptor;
+import org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeDefinitionDescriptor;
 import org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeGroupDescriptor;
 
 @Repository
 public interface StereotypeRepository {
 
     @ResultOf
-    @Cypher("MERGE (g:JMolecules:StereotypeGroup{name:$name}) RETURN g")
+    @Cypher("MERGE (g:JMolecules:Stereotype:Group{name:$name}) RETURN g")
     StereotypeGroupDescriptor mergeGroup(String name);
 
     @ResultOf
-    @Cypher("MERGE (g:JMolecules:Stereotype{name:$name}) RETURN g")
-    StereotypeDescriptor mergeStereotype(String name);
+    @Cypher("MERGE (g:JMolecules:Stereotype:Definition{name:$name}) RETURN g")
+    StereotypeDefinitionDescriptor mergeStereotype(String name);
 }

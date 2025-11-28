@@ -14,24 +14,24 @@ import com.buschmais.jqassistant.plugin.common.api.scanner.AbstractScannerPlugin
 import com.buschmais.jqassistant.plugin.common.api.scanner.filesystem.FileResource;
 import com.buschmais.jqassistant.plugin.json.api.model.JSONFileDescriptor;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeAssignmentDescriptor;
-import org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeDescriptor;
+import org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeDefinitionDescriptor;
 import org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeGroupDescriptor;
-import org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypesFileDescriptor;
+import org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeMetadataFileDescriptor;
 import org.jqassistant.plugin.jmolecules.repository.StereotypeRepository;
 import org.jqassistant.plugin.jmolecules.scanner.stereotype.schema.StereotypeDTO;
 import org.jqassistant.plugin.jmolecules.scanner.stereotype.schema.StereotypeGroupDTO;
 import org.jqassistant.plugin.jmolecules.scanner.stereotype.schema.StereotypesFileDTO;
 
+import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 import static org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeAssignmentDescriptor.Type.ANNOTATED_BY;
 import static org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeAssignmentDescriptor.Type.ASSIGNABLE_FROM;
 
 @Requires(JSONFileDescriptor.class)
-public class StereotypesFileScanner extends AbstractScannerPlugin<FileResource, StereotypesFileDescriptor> {
+public class StereotypesFileScanner extends AbstractScannerPlugin<FileResource, StereotypeMetadataFileDescriptor> {
 
-    private final ObjectMapper objectMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private final ObjectMapper objectMapper = new ObjectMapper().configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     @Override
     public boolean accepts(FileResource item, String path, Scope scope) {
@@ -39,11 +39,11 @@ public class StereotypesFileScanner extends AbstractScannerPlugin<FileResource, 
     }
 
     @Override
-    public StereotypesFileDescriptor scan(FileResource item, String path, Scope scope, Scanner scanner) throws IOException {
+    public StereotypeMetadataFileDescriptor scan(FileResource item, String path, Scope scope, Scanner scanner) throws IOException {
         ScannerContext scannerContext = scanner.getContext();
         Store store = scannerContext.getStore();
         JSONFileDescriptor jsonFileDescriptor = scannerContext.getCurrentDescriptor();
-        StereotypesFileDescriptor stereotypesFileDescriptor = store.addDescriptorType(jsonFileDescriptor, StereotypesFileDescriptor.class);
+        StereotypeMetadataFileDescriptor stereotypeMetadataFileDescriptor = store.addDescriptorType(jsonFileDescriptor, StereotypeMetadataFileDescriptor.class);
         StereotypeRepository stereotypeRepository = store.getXOManager()
                 .getRepository(StereotypeRepository.class);
         try (InputStream inputStream = item.createStream()) {
@@ -52,23 +52,24 @@ public class StereotypesFileScanner extends AbstractScannerPlugin<FileResource, 
                     .entrySet()) {
                 StereotypeGroupDescriptor stereotypeGroupDescriptor = mapStereotypeGroup(groupDTOEntry.getKey(), groupDTOEntry.getValue(),
                         stereotypeRepository);
-                stereotypesFileDescriptor.getDeclaresStereotypeGroups()
+                stereotypeMetadataFileDescriptor.getDeclaresStereotypeGroups()
                         .add(stereotypeGroupDescriptor);
             }
             for (Map.Entry<String, StereotypeDTO> stereotypeDTOEntry : stereotypesFileDTO.getStereotypes()
                     .entrySet()) {
-                StereotypeDescriptor stereotypeDescriptor = mapStereotype(stereotypeDTOEntry.getKey(), stereotypeDTOEntry.getValue(), stereotypeRepository,
-                        store);
-                stereotypesFileDescriptor.getDeclaresStereotypes()
-                        .add(stereotypeDescriptor);
+                StereotypeDefinitionDescriptor stereotypeDefinitionDescriptor = mapStereotype(stereotypeDTOEntry.getKey(), stereotypeDTOEntry.getValue(),
+                        stereotypeRepository, store);
+                stereotypeMetadataFileDescriptor.getDeclaresStereotypes()
+                        .add(stereotypeDefinitionDescriptor);
             }
         }
-        return stereotypesFileDescriptor;
+        return stereotypeMetadataFileDescriptor;
     }
 
-    private static StereotypeDescriptor mapStereotype(String name, StereotypeDTO stereotypeDTO, StereotypeRepository stereotypeRepository, Store store) {
-        StereotypeDescriptor stereotypeDescriptor = stereotypeRepository.mergeStereotype(name);
-        stereotypeDescriptor.setPriority(stereotypeDTO.getPriority());
+    private static StereotypeDefinitionDescriptor mapStereotype(String name, StereotypeDTO stereotypeDTO, StereotypeRepository stereotypeRepository,
+            Store store) {
+        StereotypeDefinitionDescriptor stereotypeDefinitionDescriptor = stereotypeRepository.mergeStereotype(name);
+        stereotypeDefinitionDescriptor.setPriority(stereotypeDTO.getPriority());
         List<String> assignments = stereotypeDTO.getAssignments();
         if (assignments != null) {
             for (String assignment : assignments) {
@@ -80,7 +81,7 @@ public class StereotypesFileScanner extends AbstractScannerPlugin<FileResource, 
                     stereotypeAssignmentDescriptor.setType(ASSIGNABLE_FROM);
                     stereotypeAssignmentDescriptor.setValue(assignment);
                 }
-                stereotypeDescriptor.getStereotypeAssignments()
+                stereotypeDefinitionDescriptor.getStereotypeAssignments()
                         .add(stereotypeAssignmentDescriptor);
             }
         }
@@ -88,10 +89,10 @@ public class StereotypesFileScanner extends AbstractScannerPlugin<FileResource, 
         if (groups != null) {
             for (String group : groups) {
                 getStereotypeGroup(group, stereotypeRepository).getContainsStereotypes()
-                        .add(stereotypeDescriptor);
+                        .add(stereotypeDefinitionDescriptor);
             }
         }
-        return stereotypeDescriptor;
+        return stereotypeDefinitionDescriptor;
     }
 
     private static StereotypeGroupDescriptor mapStereotypeGroup(String name, StereotypeGroupDTO stereotypeGroupDTO, StereotypeRepository stereotypeRepository) {

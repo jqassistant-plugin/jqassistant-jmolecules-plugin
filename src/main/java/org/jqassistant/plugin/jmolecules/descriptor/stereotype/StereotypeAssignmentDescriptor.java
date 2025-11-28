@@ -2,10 +2,8 @@ package org.jqassistant.plugin.jmolecules.descriptor.stereotype;
 
 import com.buschmais.xo.neo4j.api.annotation.Label;
 
-import org.jqassistant.plugin.jmolecules.descriptor.JMoleculesDescriptor;
-
-@Label("StereotypeAssignment")
-public interface StereotypeAssignmentDescriptor extends JMoleculesDescriptor {
+@Label("Assignment")
+public interface StereotypeAssignmentDescriptor extends StereotypeDescriptor {
 
     String getValue();
 
