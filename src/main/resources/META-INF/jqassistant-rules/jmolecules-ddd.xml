@@ -322,6 +322,10 @@
               (contextType1)-[d:DEPENDS_ON]->(contextType2)
             WHERE
                boundedContext1 <> boundedContext2
+               AND NOT (
+                 (:Artifact:Test)-[:CONTAINS]->(contextType1)
+                 OR (:Artifact:Test)-[:CONTAINS]->(contextType2)
+               )
             WITH
               boundedContext1, boundedContext2, sum(d.weight) AS totalWeight
             MERGE
