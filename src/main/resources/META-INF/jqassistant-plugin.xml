@@ -14,7 +14,17 @@
         <class>org.jqassistant.plugin.jmolecules.descriptor.ddd.BoundedContextDescriptor</class>
         <class>org.jqassistant.plugin.jmolecules.descriptor.ddd.DDDDescriptor</class>
         <class>org.jqassistant.plugin.jmolecules.descriptor.ddd.ModuleDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeMetadataFileDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeDefinitionDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeAssignmentDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeGroupDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.descriptor.stereotype.StereotypeInstanceDescriptor</class>
+        <class>org.jqassistant.plugin.jmolecules.repository.StereotypeRepository</class>
     </model>
+    <scanner>
+        <class>org.jqassistant.plugin.jmolecules.scanner.stereotype.StereotypesFileScanner</class>
+        <class>org.jqassistant.plugin.jmolecules.scanner.stereotype.PluginStereotypesScanner</class>
+    </scanner>
     <rules>
         <resource>jmolecules-cqrs.xml</resource>
         <resource>jmolecules-ddd.xml</resource>
@@ -28,5 +38,6 @@
         <resource>jmolecules-onion-simplified-strict.xml</resource>
         <resource>jmolecules-onion-classical.xml</resource>
         <resource>jmolecules-onion-classical-strict.xml</resource>
+        <resource>jmolecules-stereotype.xml</resource>
     </rules>
 </jqassistant-plugin>

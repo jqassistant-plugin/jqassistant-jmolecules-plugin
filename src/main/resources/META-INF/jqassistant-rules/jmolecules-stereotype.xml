@@ -1,0 +1,95 @@
+<jqassistant-rules xmlns="http://schema.jqassistant.org/rule/v1.10">
+
+    <concept id="jmolecules-stereotype:StereotypeInstance">
+        <description>.</description>
+        <cypher><![CDATA[
+            MATCH
+              (instance:JMolecules:Stereotype:Instance)-[:DEFINED_BY]->(definition:JMolecules:Stereotype:Definition),
+              (instance)-[:IMPLEMENTED_BY]->(type:Java:Type)
+            RETURN
+              definition as StereotypeDefinition, instance as StereotypeInstance, type AS Type
+            ORDER BY
+              definition.name, instance.name, type.fqn
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-stereotype:StereotypeInstanceByAssignableFrom">
+        <providesConcept refId="jmolecules-stereotype:StereotypeInstance"/>
+        <requiresConcept refId="java:TypeAssignableFrom"/>
+        <description>.</description>
+        <cypher><![CDATA[
+            MATCH
+              (definition:JMolecules:Stereotype:Definition)-[:HAS_ASSIGNMENT]->(assignment:JMolecules:Stereotype:Assignment{type:"ASSIGNABLE_FROM"}),
+              (stereotypeInterface:Type{fqn:assignment.value})-[:ASSIGNABLE_FROM]->(outerType:Java:Type)
+            WHERE
+              outerType.name <> "package-info"
+              and outerType <> stereotypeInterface
+            WITH
+              definition, outerType
+            MATCH
+              (outerType)-[:DECLARES*0..]->(type:Java:Type)
+            MERGE
+              (instance:JMolecules:Stereotype:Instance{name:outerType.fqn})
+            MERGE
+              (instance)-[:DEFINED_BY]->(definition)
+            MERGE
+              (instance)-[:IMPLEMENTED_BY]->(type)
+            RETURN
+              definition as StereotypeDefinition, instance as StereotypeInstance, type AS Type
+            ORDER BY
+              definition.name, instance.name, type.fqn
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-stereotype:TypeHasStereotypeByTypeAnnotation">
+        <providesConcept refId="jmolecules-stereotype:StereotypeInstance"/>
+        <description>.</description>
+        <cypher><![CDATA[
+            MATCH
+              (definition:JMolecules:Stereotype:Definition)-[:HAS_ASSIGNMENT]->(assignment:JMolecules:Stereotype:Assignment{type:"ANNOTATED_BY"}),
+              (outerType:Java:Type)-[:ANNOTATED_BY]->(annotation)-[:OF_TYPE]->(:Type{fqn:assignment.value}),
+              (outerType)-[:DECLARES*0..]->(type:Java:Type)
+            WHERE
+              outerType.name <> "package-info"
+            OPTIONAL MATCH
+              (annotation)-[:HAS]->(name:Primitive:Value)
+            WITH
+              definition, type, coalesce(name.value, outerType.fqn) as name
+            MERGE
+              (instance:JMolecules:Stereotype:Instance{name:name})
+            MERGE
+              (instance)-[:DEFINED_BY]->(definition)
+            MERGE
+              (instance)-[:IMPLEMENTED_BY]-(type)
+            RETURN
+              definition as StereotypeDefinition, instance as StereotypeInstance, type AS Type
+            ORDER BY
+              definition.name, instance.name, type.fqn
+        ]]></cypher>
+    </concept>
+
+    <concept id="jmolecules-stereotype:TypeHasStereotypeByPackageAnnotation">
+        <providesConcept refId="jmolecules-stereotype:StereotypeInstance"/>
+        <description>.</description>
+        <cypher><![CDATA[
+            MATCH
+              (definition:JMolecules:Stereotype:Definition)-[:HAS_ASSIGNMENT]->(assignment:JMolecules:Stereotype:Assignment{type:"ANNOTATED_BY"}),
+              (package:Java:Package)-[:CONTAINS]->(:Java:Type{name: "package-info"})-[:ANNOTATED_BY]->(annotation)-[:OF_TYPE]->(:Type{fqn:assignment.value}),
+              (package)-[:CONTAINS*]->(type:Java:Type)
+            OPTIONAL MATCH
+              (annotation)-[:HAS]->(name:Primitive:Value)
+            WITH
+              definition, type, coalesce(name.value, package.fqn) as name
+            MERGE
+              (instance:JMolecules:Stereotype:Instance{name:name})
+            MERGE
+              (instance)-[:DEFINED_BY]->(definition)
+            MERGE
+              (instance)-[:IMPLEMENTED_BY]-(type)
+            RETURN
+              definition as StereotypeDefinition, instance as StereotypeInstance, type AS Type
+            ORDER BY
+              definition.name, instance.name, type.fqn
+        ]]></cypher>
+    </concept>
+</jqassistant-rules>
