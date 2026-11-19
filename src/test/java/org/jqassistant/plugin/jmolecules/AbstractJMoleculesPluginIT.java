@@ -10,7 +10,8 @@ public abstract class AbstractJMoleculesPluginIT extends AbstractJavaPluginIT {
 
     protected void scanClassesAndPackages(Class<?> clazz) {
         Map<String, Object> pluginProps = new HashMap<>();
-        pluginProps.put("file.include", "/" + clazz.getPackage().getName().replace(".", "/") + "/**");
+        pluginProps.put("file.include", "/" + clazz.getPackage().getName().replace(".", "/") + "/**,"
+                + "/" + clazz.getPackage().getName().replace(".", "/"));
         getScanner(pluginProps).scan(getClassesDirectory(clazz), "/", JavaScope.CLASSPATH);
     }
 
