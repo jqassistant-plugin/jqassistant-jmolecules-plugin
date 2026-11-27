@@ -15,7 +15,7 @@
     </group>
     
     <concept id="jmolecules-hexagonal:Hexagon">
-        <description>Identifies all types that are part of a Hexagon.</description>
+        <description>Identifies all types that are part of a hexagon.</description>
         <cypher><![CDATA[
             MATCH
               (hexagon:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:CONTAINS]->(type:Java:Type)
@@ -31,11 +31,12 @@
     <concept id="jmolecules-hexagonal:HexagonPackage">
         <providesConcept refId="jmolecules-architectural-unit:ArchitecturalUnit"/>
         <providesConcept refId="jmolecules-hexagonal:Hexagon"/>
-        <description>Identifies hexagonal architectural units based on packages annotated by '@org.jmolecules.architecture.hexagonal.Hexagon'.</description>
+        <description>Identifies packages annotated by '@org.jmolecules.architecture.hexagonal.Hexagon' as hexagons.</description>
         <cypher><![CDATA[
             MATCH
               (hexagonPackage:Java:Package)-[:CONTAINS]->(packageInfo:Java:Type),
-              (packageInfo)-[:ANNOTATED_BY]->(annotation:Java:Annotation)-[:OF_TYPE]->(:Java:Type {fqn: 'org.jmolecules.architecture.hexagonal.Hexagon'}),
+              (packageInfo)-[:ANNOTATED_BY]->(annotation:Java:Annotation)-[:OF_TYPE]->(:Java:Type {fqn: 'org.jmolecules.architecture.hexagonal.Hexagon'})
+            MATCH
               (hexagonPackage)-[:CONTAINS*]->(hexagonalType:Java:Type)
             OPTIONAL MATCH
               (annotation)-[:HAS]->(id:Value {name: "id"})
@@ -87,7 +88,7 @@
         <providesConcept refId="jmolecules-hexagonal:ApplicationCore"/>
         <requiresConcept refId="jmolecules-hexagonal:Hexagon"/>
         <description>Associates all Java types which are annotated by org.jmolecules.architecture.hexagonal.Application
-            to the application core node of the corresponding hexagon.</description>
+            to the application core node of the hexagon.</description>
         <cypher><![CDATA[
             MATCH
               (hexagon:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:CONTAINS]->(coreType:Java:Type),
@@ -115,7 +116,7 @@
         <providesConcept refId="jmolecules-hexagonal:ApplicationCore"/>
         <requiresConcept refId="jmolecules-hexagonal:Hexagon"/>
         <description>Associates all Java types in packages which are annotated by org.jmolecules.architecture.hexagonal.Application
-            to the :JMolecules:Architecture:Hexagonal:ApplicationCore-node of the corresponding hexagon.</description>
+            to the :JMolecules:Architecture:Hexagonal:ApplicationCore-node of the hexagon.</description>
         <cypher><![CDATA[
             MATCH
               (hexagon:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:CONTAINS]->(packageInfo:Java:Type),
@@ -129,12 +130,6 @@
               (hexagon)-[:HAS_CORE]->(core:JMolecules:Architecture:Hexagonal:ApplicationCore)
             MERGE
               (core)-[:CONTAINS]->(coreType)
-            WITH
-              hexagon, core, coreType, [(coreType)-[:DECLARES*]->(inner:Type:Java) | inner] AS inners
-            FOREACH (inner IN inners |
-              MERGE
-                (core)-[:CONTAINS]->(inner)
-            )
             RETURN
               hexagon.id AS Hexagon,
               coreType AS CoreType
@@ -162,7 +157,7 @@
         <providesConcept refId="jmolecules-hexagonal:Port"/>
         <requiresConcept refId="jmolecules-hexagonal:Hexagon"/>
         <description>Associates all Java types which are annotated by org.jmolecules.architecture.hexagonal.-Type-Port
-            to the :JMolecules:Architecture:Hexagonal:Port{name, type}-node of the corresponding hexagon.
+            to the :JMolecules:Architecture:Hexagonal:Port{name, type}-node of the hexagon.
         </description>
         <cypher><![CDATA[
             MATCH
@@ -211,7 +206,7 @@
         <providesConcept refId="jmolecules-hexagonal:Port"/>
         <requiresConcept refId="jmolecules-hexagonal:Hexagon"/>
         <description>Associates all Java types which are in packages that are annotated by org.jmolecules.architecture.hexagonal.-Type-Port
-            to the :JMolecules:Architecture:Hexagonal:Port{name, type}-node.
+            to the :JMolecules:Architecture:Hexagonal:Port{name, type}-node of the hexagon.
         </description>
         <cypher><![CDATA[
             MATCH
@@ -273,7 +268,7 @@
         <providesConcept refId="jmolecules-hexagonal:Adapter"/>
         <requiresConcept refId="jmolecules-hexagonal:Hexagon"/>
         <description>Associates all Java types which are annotated by org.jmolecules.architecture.hexagonal.-Type-Adapter
-            to the :JMolecules:Architecture:Hexagonal:Adapter{name, type}-node of the corresponding hexagon.
+            to the :JMolecules:Architecture:Hexagonal:Adapter{name, type}-node of the hexagon.
         </description>
         <cypher><![CDATA[
             MATCH
@@ -322,7 +317,7 @@
         <providesConcept refId="jmolecules-hexagonal:Adapter"/>
         <requiresConcept refId="jmolecules-hexagonal:Hexagon"/>
         <description>Associates all Java types which are in packages that are annotated by org.jmolecules.architecture.hexagonal.-Type-Adapter
-            to the :JMolecules:Architecture:Hexagonal:Adapter{name, type}-node of the corresponding hexagon.
+            to the :JMolecules:Architecture:Hexagonal:Adapter{name, type}-node of the hexagon.
         </description>
         <cypher><![CDATA[
             MATCH
