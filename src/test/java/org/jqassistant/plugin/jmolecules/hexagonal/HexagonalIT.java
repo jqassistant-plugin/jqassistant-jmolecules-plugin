@@ -4,7 +4,7 @@ import com.buschmais.jqassistant.core.report.api.model.Result;
 import com.buschmais.jqassistant.core.rule.api.model.RuleException;
 import com.buschmais.jqassistant.plugin.java.api.model.TypeDescriptor;
 import org.jqassistant.plugin.jmolecules.AbstractJMoleculesPluginIT;
-import org.jqassistant.plugin.jmolecules.set.hexagonal.HexagonalApp;
+import org.jqassistant.plugin.jmolecules.set.hexagonal.default_hexagon.HexagonalApp;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -13,15 +13,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class HexagonalIT extends AbstractJMoleculesPluginIT {
 
+    private final String hexagonName = "default_hexagon";
+
     @Test
     public void applicationCoreType() throws RuleException {
         scanClassesAndPackages(HexagonalApp.class);
         assertThat(applyConcept("jmolecules-hexagonal:ApplicationCoreType").getStatus()).isEqualTo(Result.Status.SUCCESS);
         store.beginTransaction();
-        List<TypeDescriptor> types = query("MATCH (:JMolecules:Architecture:Hexagonal:ApplicationCore)-[:CONTAINS]->(t:Type:Java) RETURN t ORDER BY t.name").getColumn("t");
+
+        TestResult result = query("MATCH (h:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:HAS_CORE]->(:JMolecules:Architecture:Hexagonal:ApplicationCore)-[:CONTAINS]->(t:Type:Java) RETURN t, h.name AS hexagonName ORDER BY t.name");
+        List<TypeDescriptor> types = result.getColumn("t");
+        List<String> hexagonNames = result.getColumn("hexagonName");
         assertThat(types.size()).isEqualTo(2);
+        assertThat(hexagonNames).containsOnly(hexagonName);
         assertThat(types.get(0).getName()).isEqualTo("CoreService");
         assertThat(types.get(1).getName()).isEqualTo("package-info");
+
         store.commitTransaction();
     }
 
@@ -30,7 +37,10 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         scanClassesAndPackages(HexagonalApp.class);
         assertThat(applyConcept("jmolecules-hexagonal:ApplicationCorePackage").getStatus()).isEqualTo(Result.Status.SUCCESS);
         store.beginTransaction();
-        List<TypeDescriptor> types = query("MATCH (:JMolecules:Architecture:Hexagonal:ApplicationCore)-[:CONTAINS]->(t:Type) RETURN t ORDER BY toLower(t.name)").getColumn("t");
+        TestResult result = query("MATCH (h:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:HAS_CORE]->(:JMolecules:Architecture:Hexagonal:ApplicationCore)-[:CONTAINS]->(t:Type) RETURN t, h.name AS hexagonName ORDER BY toLower(t.name)");
+        List<TypeDescriptor> types = result.getColumn("t");
+        List<String> hexagonNames = result.getColumn("hexagonName");
+        assertThat(hexagonNames).containsOnly(hexagonName);
         assertThat(types.size()).isEqualTo(23);
         assertThat(types.get(0).getName()).isEqualTo("NamedPort");
         assertThat(types.get(1).getName()).isEqualTo("NamedPort$InnerNamedPort");
@@ -63,7 +73,7 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         scanClassesAndPackages(HexagonalApp.class);
         assertThat(applyConcept("jmolecules-hexagonal:PortType").getStatus()).isEqualTo(Result.Status.SUCCESS);
         store.beginTransaction();
-        TestResult unqualifiedTypes = query("MATCH (p:JMolecules:Architecture:Hexagonal:Port{type: 'Unqualified'})-[:IMPLEMENTED_BY]->(t:Type) RETURN t.name AS type, p.name AS port, p.description AS description ORDER BY toLower(t.name)");
+        TestResult unqualifiedTypes = query("MATCH (h:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:HAS_PORT]->(p:JMolecules:Architecture:Hexagonal:Port{type: 'Unqualified'})-[:IMPLEMENTED_BY]->(t:Type) RETURN h.name AS hexagonName, t.name AS type, p.name AS port, p.description AS description ORDER BY toLower(t.name)");
         assertThat(unqualifiedTypes.getRows().size()).isEqualTo(4);
         assertThat(unqualifiedTypes.getRows().get(0).get("type")).isEqualTo("NamedPort");
         assertThat(unqualifiedTypes.getRows().get(0).get("port")).isEqualTo("CustomNamedPort");
@@ -77,8 +87,10 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         assertThat(unqualifiedTypes.getRows().get(3).get("type")).isEqualTo("PortType$InnerPortType");
         assertThat(unqualifiedTypes.getRows().get(3).get("port")).isEqualTo("PortType");
         assertThat(unqualifiedTypes.getRows().get(3).get("description")).isEqualTo(null);
+        List<String> hexagonNamesOfUnqualifiedTypes = unqualifiedTypes.getColumn("hexagonName");
+        assertThat(hexagonNamesOfUnqualifiedTypes).containsOnly(hexagonName);
 
-        TestResult primaryTypes = query("MATCH (p:JMolecules:Architecture:Hexagonal:Port{type: 'Primary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN t.name AS type, p.name AS port, p.description AS description ORDER BY toLower(t.name)");
+        TestResult primaryTypes = query("MATCH (h:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:HAS_PORT]->(p:JMolecules:Architecture:Hexagonal:Port{type: 'Primary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN h.name AS hexagonName, t.name AS type, p.name AS port, p.description AS description ORDER BY toLower(t.name)");
         assertThat(primaryTypes.getRows().size()).isEqualTo(5);
         assertThat(primaryTypes.getRows().get(0).get("type")).isEqualTo("NamedPrimaryPort");
         assertThat(primaryTypes.getRows().get(0).get("port")).isEqualTo("CustomNamedPrimaryPort");
@@ -95,8 +107,10 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         assertThat(primaryTypes.getRows().get(4).get("type")).isEqualTo("PrimaryPortType$InnerPrimaryPortType");
         assertThat(primaryTypes.getRows().get(4).get("port")).isEqualTo("PrimaryPortType");
         assertThat(primaryTypes.getRows().get(4).get("description")).isEqualTo(null);
+        List<String> hexagonNamesOfPrimaryTypes = primaryTypes.getColumn("hexagonName");
+        assertThat(hexagonNamesOfPrimaryTypes).containsOnly(hexagonName);
 
-        TestResult secondaryTypes = query("MATCH (p:JMolecules:Architecture:Hexagonal:Port{type: 'Secondary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN t.name AS type, p.name AS port, p.description AS description ORDER BY toLower(t.name)");
+        TestResult secondaryTypes = query("MATCH (h:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:HAS_PORT]->(p:JMolecules:Architecture:Hexagonal:Port{type: 'Secondary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN h.name AS hexagonName, t.name AS type, p.name AS port, p.description AS description ORDER BY toLower(t.name)");
         assertThat(secondaryTypes.getRows().size()).isEqualTo(4);
         assertThat(secondaryTypes.getRows().get(0).get("type")).isEqualTo("NamedSecondaryPort");
         assertThat(secondaryTypes.getRows().get(0).get("port")).isEqualTo("CustomNamedSecondaryPort");
@@ -110,6 +124,8 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         assertThat(secondaryTypes.getRows().get(3).get("type")).isEqualTo("SecondaryPortType$InnerSecondaryPortType");
         assertThat(secondaryTypes.getRows().get(3).get("port")).isEqualTo("SecondaryPortType");
         assertThat(secondaryTypes.getRows().get(3).get("description")).isEqualTo(null);
+        List<String> hexagonNamesOfSecondaryTypes = secondaryTypes.getColumn("hexagonName");
+        assertThat(hexagonNamesOfSecondaryTypes).containsOnly(hexagonName);
         store.commitTransaction();
     }
 
@@ -118,7 +134,7 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         scanClassesAndPackages(HexagonalApp.class);
         assertThat(applyConcept("jmolecules-hexagonal:PortPackage").getStatus()).isEqualTo(Result.Status.SUCCESS);
         store.beginTransaction();
-        TestResult unqualifiedTypes = query("MATCH (p:JMolecules:Architecture:Hexagonal:Port{type: 'Unqualified'})-[:IMPLEMENTED_BY]->(t:Type) RETURN t.name AS type, p.name AS port, p.description AS description ORDER BY toLower(t.name)");
+        TestResult unqualifiedTypes = query("MATCH (h:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:HAS_PORT]->(p:JMolecules:Architecture:Hexagonal:Port{type: 'Unqualified'})-[:IMPLEMENTED_BY]->(t:Type) RETURN h.name AS hexagonName, t.name AS type, p.name AS port, p.description AS description ORDER BY toLower(t.name)");
         assertThat(unqualifiedTypes.getRows().size()).isEqualTo(3);
         assertThat(unqualifiedTypes.getRows().get(0).get("type")).isEqualTo("package-info");
         assertThat(unqualifiedTypes.getRows().get(0).get("port")).isEqualTo("NamedPortPackage");
@@ -129,8 +145,10 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         assertThat(unqualifiedTypes.getRows().get(2).get("type")).isEqualTo("PortPackage$InnerPortPackage");
         assertThat(unqualifiedTypes.getRows().get(2).get("port")).isEqualTo("NamedPortPackage");
         assertThat(unqualifiedTypes.getRows().get(2).get("description")).isEqualTo("Some Port Description");
+        List<String> hexagonNamesOfUnqualifiedTypes = unqualifiedTypes.getColumn("hexagonName");
+        assertThat(hexagonNamesOfUnqualifiedTypes).containsOnly(hexagonName);
 
-        TestResult primaryTypes = query("MATCH (p:JMolecules:Architecture:Hexagonal:Port{type: 'Primary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN t.name AS type, p.name AS port, p.description AS description ORDER BY toLower(t.name)");
+        TestResult primaryTypes = query("MATCH (h:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:HAS_PORT]->(p:JMolecules:Architecture:Hexagonal:Port{type: 'Primary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN h.name AS hexagonName, t.name AS type, p.name AS port, p.description AS description ORDER BY toLower(t.name)");
         assertThat(primaryTypes.getRows().size()).isEqualTo(3);
         assertThat(primaryTypes.getRows().get(0).get("type")).isEqualTo("package-info");
         assertThat(primaryTypes.getRows().get(0).get("port")).isEqualTo("primaryport");
@@ -141,8 +159,10 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         assertThat(primaryTypes.getRows().get(2).get("type")).isEqualTo("PrimaryPortPackage$InnerPrimaryPortPackage");
         assertThat(primaryTypes.getRows().get(2).get("port")).isEqualTo("primaryport");
         assertThat(primaryTypes.getRows().get(2).get("description")).isEqualTo(null);
+        List<String> hexagonNamesOfPrimaryTypes = primaryTypes.getColumn("hexagonName");
+        assertThat(hexagonNamesOfPrimaryTypes).containsOnly(hexagonName);
 
-        TestResult secondaryTypes = query("MATCH (p:JMolecules:Architecture:Hexagonal:Port{type: 'Secondary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN t.name AS type, p.name AS port, p.description AS description ORDER BY toLower(t.name)");
+        TestResult secondaryTypes = query("MATCH (h:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:HAS_PORT]->(p:JMolecules:Architecture:Hexagonal:Port{type: 'Secondary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN h.name AS hexagonName, t.name AS type, p.name AS port, p.description AS description ORDER BY toLower(t.name)");
         assertThat(secondaryTypes.getRows().size()).isEqualTo(3);
         assertThat(secondaryTypes.getRows().get(0).get("type")).isEqualTo("package-info");
         assertThat(secondaryTypes.getRows().get(0).get("port")).isEqualTo("secondaryport");
@@ -153,6 +173,8 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         assertThat(secondaryTypes.getRows().get(2).get("type")).isEqualTo("SecondaryPortPackage$InnerSecondaryPortPackage");
         assertThat(secondaryTypes.getRows().get(2).get("port")).isEqualTo("secondaryport");
         assertThat(secondaryTypes.getRows().get(2).get("description")).isEqualTo(null);
+        List<String> hexagonNamesOfSecondaryTypes = secondaryTypes.getColumn("hexagonName");
+        assertThat(hexagonNamesOfSecondaryTypes).containsOnly(hexagonName);
         store.commitTransaction();
     }
 
@@ -161,7 +183,7 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         scanClassesAndPackages(HexagonalApp.class);
         assertThat(applyConcept("jmolecules-hexagonal:AdapterType").getStatus()).isEqualTo(Result.Status.SUCCESS);
         store.beginTransaction();
-        TestResult unqualifiedTypes = query("MATCH (a:JMolecules:Architecture:Hexagonal:Adapter{type: 'Unqualified'})-[:IMPLEMENTED_BY]->(t:Type) RETURN t.name AS type, a.name AS adapter, a.description AS description ORDER BY toLower(t.name)");
+        TestResult unqualifiedTypes = query("MATCH (h:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:HAS_ADAPTER]->(a:JMolecules:Architecture:Hexagonal:Adapter{type: 'Unqualified'})-[:IMPLEMENTED_BY]->(t:Type) RETURN h.name AS hexagonName, t.name AS type, a.name AS adapter, a.description AS description ORDER BY toLower(t.name)");
         assertThat(unqualifiedTypes.getRows().size()).isEqualTo(4);
         assertThat(unqualifiedTypes.getRows().get(0).get("type")).isEqualTo("AdapterType");
         assertThat(unqualifiedTypes.getRows().get(0).get("adapter")).isEqualTo("AdapterType");
@@ -175,8 +197,10 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         assertThat(unqualifiedTypes.getRows().get(3).get("type")).isEqualTo("NamedAdapter$InnerNamedAdapter");
         assertThat(unqualifiedTypes.getRows().get(3).get("adapter")).isEqualTo("CustomNamedAdapter");
         assertThat(unqualifiedTypes.getRows().get(3).get("description")).isEqualTo(null);
+        List<String> hexagonNamesOfUnqualifiedTypes = unqualifiedTypes.getColumn("hexagonName");
+        assertThat(hexagonNamesOfUnqualifiedTypes).containsOnly(hexagonName);
 
-        TestResult primaryTypes = query("MATCH (a:JMolecules:Architecture:Hexagonal:Adapter{type: 'Primary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN t.name AS type, a.name AS adapter, a.description AS description ORDER BY toLower(t.name)");
+        TestResult primaryTypes = query("MATCH (h:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:HAS_ADAPTER]->(a:JMolecules:Architecture:Hexagonal:Adapter{type: 'Primary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN h.name AS hexagonName, t.name AS type, a.name AS adapter, a.description AS description ORDER BY toLower(t.name)");
         assertThat(primaryTypes.getRows().size()).isEqualTo(5);
         assertThat(primaryTypes.getRows().get(0).get("type")).isEqualTo("NamedPrimaryAdapter");
         assertThat(primaryTypes.getRows().get(0).get("adapter")).isEqualTo("CustomNamedPrimaryAdapter");
@@ -193,8 +217,10 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         assertThat(primaryTypes.getRows().get(4).get("type")).isEqualTo("PrimaryAdapterType$InnerPrimaryAdapterType");
         assertThat(primaryTypes.getRows().get(4).get("adapter")).isEqualTo("PrimaryAdapterType");
         assertThat(primaryTypes.getRows().get(4).get("description")).isEqualTo(null);
+        List<String> hexagonNamesOfPrimaryTypes = primaryTypes.getColumn("hexagonName");
+        assertThat(hexagonNamesOfPrimaryTypes).containsOnly(hexagonName);
 
-        TestResult secondaryTypes = query("MATCH (a:JMolecules:Architecture:Hexagonal:Adapter{type: 'Secondary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN t.name AS type, a.name AS adapter, a.description AS description ORDER BY toLower(t.name)");
+        TestResult secondaryTypes = query("MATCH (h:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:HAS_ADAPTER]->(a:JMolecules:Architecture:Hexagonal:Adapter{type: 'Secondary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN h.name AS hexagonName, t.name AS type, a.name AS adapter, a.description AS description ORDER BY toLower(t.name)");
         assertThat(secondaryTypes.getRows().size()).isEqualTo(4);
         assertThat(secondaryTypes.getRows().get(0).get("type")).isEqualTo("NamedSecondaryAdapter");
         assertThat(secondaryTypes.getRows().get(0).get("adapter")).isEqualTo("CustomNamedSecondaryAdapter");
@@ -208,6 +234,8 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         assertThat(secondaryTypes.getRows().get(3).get("type")).isEqualTo("SecondaryAdapterType$InnerSecondaryAdapterType");
         assertThat(secondaryTypes.getRows().get(3).get("adapter")).isEqualTo("SecondaryAdapterType");
         assertThat(secondaryTypes.getRows().get(3).get("description")).isEqualTo(null);
+        List<String> hexagonNamesOfSecondaryTypes = secondaryTypes.getColumn("hexagonName");
+        assertThat(hexagonNamesOfSecondaryTypes).containsOnly(hexagonName);
         store.commitTransaction();
     }
 
@@ -216,7 +244,7 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         scanClassesAndPackages(HexagonalApp.class);
         assertThat(applyConcept("jmolecules-hexagonal:AdapterPackage").getStatus()).isEqualTo(Result.Status.SUCCESS);
         store.beginTransaction();
-        TestResult unqualifiedTypes = query("MATCH (a:JMolecules:Architecture:Hexagonal:Adapter{type: 'Unqualified'})-[:IMPLEMENTED_BY]->(t:Type) RETURN t.name AS type, a.name AS adapter, a.description AS description ORDER BY toLower(t.name)");
+        TestResult unqualifiedTypes = query("MATCH (h:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:HAS_ADAPTER]->(a:JMolecules:Architecture:Hexagonal:Adapter{type: 'Unqualified'})-[:IMPLEMENTED_BY]->(t:Type) RETURN h.name AS hexagonName, t.name AS type, a.name AS adapter, a.description AS description ORDER BY toLower(t.name)");
         assertThat(unqualifiedTypes.getRows().size()).isEqualTo(3);
         assertThat(unqualifiedTypes.getRows().get(0).get("type")).isEqualTo("AdapterPackage");
         assertThat(unqualifiedTypes.getRows().get(0).get("adapter")).isEqualTo("adapter");
@@ -227,8 +255,10 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         assertThat(unqualifiedTypes.getRows().get(2).get("type")).isEqualTo("package-info");
         assertThat(unqualifiedTypes.getRows().get(2).get("adapter")).isEqualTo("adapter");
         assertThat(unqualifiedTypes.getRows().get(2).get("description")).isEqualTo(null);
+        List<String> hexagonNamesOfUnqualifiedTypes = unqualifiedTypes.getColumn("hexagonName");
+        assertThat(hexagonNamesOfUnqualifiedTypes).containsOnly(hexagonName);
 
-        TestResult primaryTypes = query("MATCH (a:JMolecules:Architecture:Hexagonal:Adapter{type: 'Primary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN t.name AS type, a.name AS adapter, a.description AS description ORDER BY toLower(t.name)");
+        TestResult primaryTypes = query("MATCH (h:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:HAS_ADAPTER]->(a:JMolecules:Architecture:Hexagonal:Adapter{type: 'Primary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN h.name AS hexagonName, t.name AS type, a.name AS adapter, a.description AS description ORDER BY toLower(t.name)");
         assertThat(primaryTypes.getRows().size()).isEqualTo(3);
         assertThat(primaryTypes.getRows().get(0).get("type")).isEqualTo("package-info");
         assertThat(primaryTypes.getRows().get(0).get("adapter")).isEqualTo("NamedPrimaryAdapterPackage");
@@ -239,8 +269,10 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         assertThat(primaryTypes.getRows().get(2).get("type")).isEqualTo("PrimaryAdapterPackage$InnerPrimaryAdapterPackage");
         assertThat(primaryTypes.getRows().get(2).get("adapter")).isEqualTo("NamedPrimaryAdapterPackage");
         assertThat(primaryTypes.getRows().get(2).get("description")).isEqualTo("Some Primary Adapter Description");
+        List<String> hexagonNamesOfPrimaryTypes = primaryTypes.getColumn("hexagonName");
+        assertThat(hexagonNamesOfPrimaryTypes).containsOnly(hexagonName);
 
-        TestResult secondaryTypes = query("MATCH (a:JMolecules:Architecture:Hexagonal:Adapter{type: 'Secondary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN t.name AS type, a.name AS adapter, a.description AS description ORDER BY toLower(t.name)");
+        TestResult secondaryTypes = query("MATCH (h:JMolecules:Architecture:ArchitecturalUnit:Hexagonal:Hexagon)-[:HAS_ADAPTER]->(a:JMolecules:Architecture:Hexagonal:Adapter{type: 'Secondary'})-[:IMPLEMENTED_BY]->(t:Type) RETURN h.name AS hexagonName, t.name AS type, a.name AS adapter, a.description AS description ORDER BY toLower(t.name)");
         assertThat(secondaryTypes.getRows().size()).isEqualTo(3);
         assertThat(secondaryTypes.getRows().get(0).get("type")).isEqualTo("package-info");
         assertThat(secondaryTypes.getRows().get(0).get("adapter")).isEqualTo("secondaryadapter");
@@ -251,6 +283,8 @@ public class HexagonalIT extends AbstractJMoleculesPluginIT {
         assertThat(secondaryTypes.getRows().get(2).get("type")).isEqualTo("SecondaryAdapterPackage$InnerSecondaryAdapterPackage");
         assertThat(secondaryTypes.getRows().get(2).get("adapter")).isEqualTo("secondaryadapter");
         assertThat(secondaryTypes.getRows().get(2).get("description")).isEqualTo(null);
+        List<String> hexagonNamesOfSecondaryTypes = secondaryTypes.getColumn("hexagonName");
+        assertThat(hexagonNamesOfSecondaryTypes).containsOnly(hexagonName);
         store.commitTransaction();
     }
 

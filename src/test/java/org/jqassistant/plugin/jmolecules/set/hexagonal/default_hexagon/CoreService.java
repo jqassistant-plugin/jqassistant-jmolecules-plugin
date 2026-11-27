@@ -1,0 +1,7 @@
+package org.jqassistant.plugin.jmolecules.set.hexagonal.default_hexagon;
+
+import org.jmolecules.architecture.hexagonal.Application;
+
+@Application
+public class CoreService {
+}
