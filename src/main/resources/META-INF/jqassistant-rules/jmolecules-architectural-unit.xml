@@ -1,0 +1,22 @@
+<jqassistant-rules xmlns="http://schema.jqassistant.org/rule/v1.10">
+
+    <group id="jmolecules-architectural-unit:Default">
+        <includeConcept refId="jmolecules-architectural-unit:ArchitecturalUnit" severity="info"/>
+    </group>
+
+    <concept id="jmolecules-architectural-unit:ArchitecturalUnit">
+        <description>Identifies all architectural units and associates their Java types.</description>
+        <cypher><![CDATA[
+            MATCH
+              (architecturalUnit:JMolecules:Architecture:ArchitecturalUnit)-[:CONTAINS]->(architecturalUnitType:Java:Type)
+            RETURN
+              architecturalUnit.id AS ArchitecturalUnit,
+              architecturalUnit.fqn AS ArchitecturalUnitType
+            ORDER BY
+              ArchitecturalUnit, ArchitecturalUnitType
+        ]]></cypher>
+    </concept>
+
+
+
+</jqassistant-rules>
